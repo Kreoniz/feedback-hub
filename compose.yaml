@@ -66,6 +66,8 @@ services:
     depends_on: [app]
     restart: unless-stopped
     read_only: true
+    tmpfs:
+      - /data:rw,noexec,nosuid,size=8m,uid=10001,gid=10001
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     mem_limit: 96m
