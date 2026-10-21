@@ -18,6 +18,8 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 RUN addgroup -g 10001 app && adduser -D -u 10001 -G app app
 COPY --from=backend /feedback-hub /usr/local/bin/feedback-hub
 COPY --from=web /src/dist /app/web
+# Public assets must remain readable after a restrictive source-export umask.
+RUN chmod -R a+rX /app/web
 USER 10001:10001
 WORKDIR /app
 ENV STATIC_DIR=/app/web LISTEN_ADDR=:8080
