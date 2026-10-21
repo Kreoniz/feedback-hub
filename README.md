@@ -47,7 +47,7 @@ pnpm --dir web exec playwright install --with-deps firefox
 ./scripts/test-e2e.sh
 ```
 
-PostgreSQL-тесты создают/чистят собственные fixtures; URL должен указывать только на тестовую БД. `scripts/test-e2e.sh` запускает настоящий Go API, использует случайный тестовый admin-пароль и завершает процесс после тестов. Логи/артефакты остаются в ignored `.local` и `web/test-results`. CI запускает Go vet/race, TypeScript, unit, PostgreSQL, Playwright и Docker build. Результаты конкретной проверки — в [docs/validation.md](docs/validation.md), актуальный редизайн и отмена голосов — в [отдельном отчёте](docs/validation-redesign.md).
+PostgreSQL-тесты создают/чистят собственные fixtures; URL должен указывать только на тестовую БД. `scripts/test-e2e.sh` запускает настоящий Go API, использует случайный тестовый admin-пароль и завершает процесс после тестов. Логи/артефакты остаются в ignored `.local` и `web/test-results`. CI запускает Go vet/race, TypeScript, unit, PostgreSQL, Playwright и Docker build. Результаты конкретной проверки — в [docs/validation.md](docs/validation.md), актуальные взаимодействия и deploy-образ — в [отдельном отчёте](docs/validation-interactions.md).
 
 ## Подключение проектов
 
@@ -75,3 +75,5 @@ PostgreSQL-тесты создают/чистят собственные fixture
 Целевой домен **feedback.kreoniz.ru**. Готовы [production Compose](deploy/compose.production.yaml), [фрагмент Caddy](deploy/Caddyfile.production) и [runbook](docs/deployment.md). Предполагается существующий Caddy в общей Docker-сети. Сборку выполнять локально/в CI, на VPS переносить готовый образ. **Production не развёрнут; DNS и работающие сервисы не изменены.** Применение к общей инфраструктуре — отдельный разрешённый шаг.
 
 Telegram, GitHub Issues, вложения, комментарии, аккаунты посетителей и автоматическая LLM-классификация отложены. При добавлении уведомлений понадобится транзакционный outbox; сейчас отдельная очередь и интеграционные абстракции не нужны.
+
+Текущие защиты и примеры их срабатывания: [docs/abuse-controls.md](docs/abuse-controls.md). Иконки проектов, скелетоны и независимое голосование описаны в [web/README.md](web/README.md).
