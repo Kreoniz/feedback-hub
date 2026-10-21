@@ -119,7 +119,7 @@ func (s *Store) Submit(ctx context.Context, r Submission) (bool, error) {
 	return duplicate, nil
 }
 
-const featureColumns = `r.id::text,r.project,r.title,r.description,r.status,(SELECT count(*) FROM votes v WHERE v.report_id=r.id),EXISTS(SELECT 1 FROM votes v WHERE v.report_id=r.id AND v.visitor=$1),r.created_at`
+const featureColumns = `r.id::text,r.project,r.title,r.description,r.status,(SELECT count(*) FROM votes v WHERE v.report_id=r.id AND v.active),EXISTS(SELECT 1 FROM votes v WHERE v.report_id=r.id AND v.visitor=$1 AND v.active),r.created_at`
 const reportColumns = featureColumns + `,r.type,r.details,r.context,r.moderation,r.priority,r.information,r.duplicate_of::text,r.admin_note,r.updated_at`
 
 func scanFeature(row pgx.Row) (Feature, error) {
@@ -235,12 +235,21 @@ func itoa(n int) string {
 }
 
 func (s *Store) Vote(ctx context.Context, id string, visitor, network []byte) (int, error) {
+	return s.setVote(ctx, id, visitor, network, true)
+}
+
+func (s *Store) UndoVote(ctx context.Context, id string, visitor []byte) (int, error) {
+	return s.setVote(ctx, id, visitor, nil, false)
+}
+
+func (s *Store) setVote(ctx context.Context, id string, visitor, network []byte, active bool) (int, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
 		return 0, err
 	}
 	defer rollback(tx)
 	var visible bool
+	// Serialize both vote directions and moderation, including the returned count.
 	err = tx.QueryRow(ctx, `SELECT type='feature' AND moderation='approved' AND duplicate_of IS NULL FROM reports WHERE id=$1 FOR UPDATE`, id).Scan(&visible)
 	if errors.Is(err, pgx.ErrNoRows) || err == nil && !visible {
 		return 0, ErrNotFound
@@ -248,11 +257,16 @@ func (s *Store) Vote(ctx context.Context, id string, visitor, network []byte) (i
 	if err != nil {
 		return 0, err
 	}
-	var exists bool
-	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM votes WHERE report_id=$1 AND visitor=$2)`, id, visitor).Scan(&exists); err != nil {
+	var voted bool
+	err = tx.QueryRow(ctx, `SELECT active FROM votes WHERE report_id=$1 AND visitor=$2`, id, visitor).Scan(&voted)
+	exists := err == nil
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return 0, err
 	}
-	if !exists {
+	if active && !exists {
+		// Only a first-ever visitor/report pair spends a network cooldown or slot.
+		// Own re-votes reuse the retained row without changing any cooldown, so
+		// other/reset-cookie visitors still wait out the original network limit.
 		tag, err := tx.Exec(ctx, `INSERT INTO vote_cooldowns(report_id,network,expires_at) VALUES($1,$2,now()+interval '60 seconds') ON CONFLICT(report_id,network) DO UPDATE SET expires_at=EXCLUDED.expires_at WHERE vote_cooldowns.expires_at<=now()`, id, network)
 		if err != nil {
 			return 0, err
@@ -270,12 +284,16 @@ func (s *Store) Vote(ctx context.Context, id string, visitor, network []byte) (i
 		if _, err = tx.Exec(ctx, `UPDATE intake_totals SET votes=votes+1 WHERE id=true`); err != nil {
 			return 0, err
 		}
-		if _, err = tx.Exec(ctx, `INSERT INTO votes(report_id,visitor) VALUES($1,$2) ON CONFLICT DO NOTHING`, id, visitor); err != nil {
+	}
+	if active != voted {
+		// Retain inactive rows and their lifetime slots. Repeated DELETEs, including
+		// visitors who never voted, create no history and spend no quota.
+		if _, err = tx.Exec(ctx, `INSERT INTO votes(report_id,visitor,active) VALUES($1,$2,$3) ON CONFLICT(report_id,visitor) DO UPDATE SET active=EXCLUDED.active`, id, visitor, active); err != nil {
 			return 0, err
 		}
 	}
 	var count int
-	if err = tx.QueryRow(ctx, `SELECT count(*) FROM votes WHERE report_id=$1`, id).Scan(&count); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT count(*) FROM votes WHERE report_id=$1 AND active`, id).Scan(&count); err != nil {
 		return 0, err
 	}
 	if err = tx.Commit(ctx); err != nil {

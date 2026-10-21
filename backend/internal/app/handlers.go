@@ -146,7 +146,8 @@ func (a *App) vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct{}
-	if decode(w, r, &input) != nil {
+	// DELETE has no required input. A supplied body still follows strict JSON rules.
+	if (r.Method != http.MethodDelete || r.ContentLength != 0) && decode(w, r, &input) != nil {
 		fail(w, 400, "Неверный формат голоса")
 		return
 	}
@@ -165,12 +166,19 @@ func (a *App) vote(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Неверный адрес запроса")
 		return
 	}
-	n, err := a.db.Vote(r.Context(), id, a.digest("visitor", visitor), a.digest("vote-network", ip))
+	voted := r.Method == http.MethodPost
+	var n int
+	var err error
+	if voted {
+		n, err = a.db.Vote(r.Context(), id, a.digest("visitor", visitor), a.digest("vote-network", ip))
+	} else {
+		n, err = a.db.UndoVote(r.Context(), id, a.digest("visitor", visitor))
+	}
 	if err != nil {
 		a.resultError(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"votes": n, "voted": true})
+	writeJSON(w, 200, map[string]any{"votes": n, "voted": voted})
 }
 func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	if !a.allow(r, "login", 5, 15*time.Minute) || !a.adminLimits.allow("login-global", 30, 15*time.Minute, a.now()) {

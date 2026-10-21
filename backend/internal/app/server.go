@@ -45,6 +45,7 @@ func (a *App) Handler() http.Handler {
 	m.HandleFunc("GET /api/features", a.features)
 	m.HandleFunc("POST /api/reports", a.submit)
 	m.HandleFunc("POST /api/features/{id}/vote", a.vote)
+	m.HandleFunc("DELETE /api/features/{id}/vote", a.vote)
 	m.HandleFunc("POST /api/admin/login", a.login)
 	m.HandleFunc("GET /api/admin/session", a.session)
 	m.HandleFunc("POST /api/admin/logout", a.authorize(a.logout))
