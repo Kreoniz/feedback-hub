@@ -1,4 +1,4 @@
-import { Component, StrictMode, useState } from "react";
+import { Component, StrictMode, useEffect, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { Button } from "unlikely-ui/button";
@@ -14,10 +14,37 @@ import { useResource } from "./hooks";
 import { BoardSkeleton, ErrorNotice, Icon, Loading } from "./ui";
 
 const loadProjects = (signal: AbortSignal) => api.projects(signal);
+const appearanceKey = "feedback-hub-appearance";
+type Appearance = "light" | "dark";
+
+function savedAppearance(): Appearance {
+  try {
+    return localStorage.getItem(appearanceKey) === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+}
 
 function App() {
   const projects = useResource(loadProjects);
-  const [appearance, setAppearance] = useState<"light" | "dark">("light");
+  const [appearance, setAppearance] = useState<Appearance>(savedAppearance);
+  useEffect(() => {
+    try {
+      localStorage.setItem(appearanceKey, appearance);
+    } catch {
+      // Storage can be blocked; switching the current page must still work.
+    }
+    document.documentElement.style.colorScheme = appearance;
+    const canvas = document.querySelector(".app-theme");
+    if (canvas) {
+      const color = getComputedStyle(canvas)
+        .getPropertyValue("--u-canvas")
+        .trim();
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", color);
+    }
+  }, [appearance]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   const admin = path === "/admin";
   return (

@@ -13,6 +13,10 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
     "Предложения",
   );
   await expect(page.getByText(/^Найдено:/)).toBeVisible();
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "dark",
+  );
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("link", { name: "Перейти к содержимому" }),
@@ -88,10 +92,31 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   await expect(
     page.getByRole("button", { name: "Как это работает", exact: true }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Включить тёмную тему" }).click();
+  await page.getByRole("button", { name: "Включить светлую тему" }).click();
   await accessible(page);
+  await page.reload();
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "light",
+  );
   await page.setViewportSize({ width: 1280, height: 900 });
   await noHorizontalOverflow(page);
+  await page.goto("/new?project=campus&type=bug");
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "light",
+  );
+  await page.getByRole("button", { name: "Включить тёмную тему" }).click();
+  await page.goto("/admin");
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "dark",
+  );
+  await page.reload();
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "dark",
+  );
   await page.goto("/new?project=campus&type=bug");
   await expect(
     page.getByRole("heading", { name: "Обратная связь" }),
@@ -187,9 +212,7 @@ test("skeletons replace initial and list loading; project icons stay in menu and
     ).toBe(true);
   }
   await accessible(page);
-  await page
-    .getByRole("option", { name: "Кампус", exact: true })
-    .click();
+  await page.getByRole("option", { name: "Кампус", exact: true }).click();
   await expect(
     page.getByRole("combobox", { name: "Проект", exact: true }).locator("img"),
   ).toHaveAttribute("src", "/projects/campus.png");
@@ -197,4 +220,35 @@ test("skeletons replace initial and list loading; project icons stay in menu and
   await noHorizontalOverflow(page);
   await page.getByRole("combobox", { name: "Проект", exact: true }).click();
   await accessible(page);
+});
+
+test("theme switching works when browser storage is blocked", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("Storage blocked", "SecurityError");
+      },
+    });
+  });
+  await page.goto("/");
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "dark",
+  );
+  await page.getByRole("button", { name: "Включить светлую тему" }).click();
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "light",
+  );
+  await page.reload();
+  await expect(page.locator(".app-theme")).toHaveAttribute(
+    "data-appearance",
+    "dark",
+  );
+  expect(errors).toEqual([]);
 });
