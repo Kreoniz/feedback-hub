@@ -67,7 +67,7 @@ bug = {'project': 'campus', 'type': 'bug', 'description': marker + ' — не о
 require(public.request('POST', '/api/reports', feature)[0] == 201, 'Anonymous feature accepted')
 require(public.request('POST', '/api/reports', bug)[0] == 201, 'Description-only bug accepted')
 status, result, _ = public.request('POST', '/api/reports', feature)
-require(status == 200 and result['duplicate'], 'Exact submission deduplicated')
+require(status == 201 and not result['duplicate'], 'Dedupe does not disclose private existence')
 require(public.request('POST', '/api/reports', {**bug, 'website': 'bot'})[0] == 201, 'Honeypot non-disclosing response')
 query = '?q=' + urllib.parse.quote(marker)
 status, inbox, _ = admin.request('GET', '/api/admin/reports' + query)
