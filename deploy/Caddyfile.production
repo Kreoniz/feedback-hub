@@ -1,0 +1,20 @@
+# Add ONLY this site block to the existing Caddy configuration after approval.
+# Keep existing sites and global options. Do not replace the shared file.
+# Caddy must join EDGE_NETWORK and app TRUSTED_PROXIES must contain its exact peer IP.
+feedback.kreoniz.ru {
+	request_body {
+		max_size 32KB
+	}
+	@internal path /health/*
+	respond @internal 404
+	encode zstd gzip
+	reverse_proxy feedback-hub-app:8080 {
+		header_up X-Forwarded-For {http.request.remote.host}
+		header_up -Forwarded
+		header_up -X-Real-IP
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 15s
+		}
+	}
+}
