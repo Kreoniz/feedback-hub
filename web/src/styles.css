@@ -1062,6 +1062,8 @@ ul {
   height: 1rem;
 }
 .vote-button[aria-busy="true"] {
+  /* A pending vote stays visually solid while Base UI blocks repeat activation. */
+  opacity: 1;
   cursor: progress;
 }
 .project-link {

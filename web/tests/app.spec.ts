@@ -170,19 +170,52 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     ).text();
     expect(publicJSON).not.toContain("PRIVATE");
     expect(publicJSON).not.toContain(bugText);
-    const targetCard = publicPage
-      .locator(".feature-card")
-      .filter({
-        has: publicPage.getByRole("button", { name: title, exact: true }),
-      });
-    const otherCard = publicPage
-      .locator(".feature-card")
-      .filter({
-        has: publicPage.getByRole("button", {
-          name: originalTitle,
-          exact: true,
+    const targetCard = publicPage.locator(".feature-card").filter({
+      has: publicPage.getByRole("button", { name: title, exact: true }),
+    });
+    const otherCard = publicPage.locator(".feature-card").filter({
+      has: publicPage.getByRole("button", {
+        name: originalTitle,
+        exact: true,
+      }),
+    });
+    const clickedButton = targetCard.locator(".vote-button");
+    const clickedNode = await clickedButton.elementHandle();
+    const housingNode = await clickedButton
+      .locator(".u-physical-housing")
+      .elementHandle();
+    const appearance = await clickedButton.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        opacity: style.opacity,
+        visibility: style.visibility,
+        display: style.display,
+      };
+    });
+    expect(appearance.opacity).toBe("1");
+    async function expectStableVoteAppearance() {
+      expect(
+        await clickedButton.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            opacity: style.opacity,
+            visibility: style.visibility,
+            display: style.display,
+          };
         }),
-      });
+      ).toEqual(appearance);
+      expect(
+        await clickedButton.evaluate(
+          (element, original) => element === original,
+          clickedNode,
+        ),
+      ).toBe(true);
+      expect(
+        await clickedButton
+          .locator(".u-physical-housing")
+          .evaluate((element, original) => element === original, housingNode),
+      ).toBe(true);
+    }
     const sibling = otherCard.locator(".vote-button");
     const siblingNode = await sibling.elementHandle();
     const siblingHTML = await sibling.evaluate((el) => el.outerHTML);
@@ -205,6 +238,7 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
         "true",
       );
       await expect(targetCard.locator(".vote-button")).toBeFocused();
+      await expectStableVoteAppearance();
       await expect(sibling).toBeEnabled();
       expect(await sibling.evaluate((el) => el.outerHTML)).toBe(siblingHTML);
       expect(
@@ -219,6 +253,7 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
       targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toBeEnabled();
     await publicPage.unroute(`**/api/features/${featureId}/vote`);
+    await expectStableVoteAppearance();
     await expect(
       targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toBeEnabled();
