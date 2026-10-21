@@ -25,7 +25,7 @@
 }
 http://:8080 {
 	request_body {
-		max_size 32KB
+		max_size 64KB
 	}
 	reverse_proxy app:8080 {
 		header_up X-Forwarded-For {http.request.remote.host}

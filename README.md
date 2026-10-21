@@ -36,7 +36,7 @@ pnpm --dir web install --frozen-lockfile
 ./scripts/check.sh
 ```
 
-Для frontend hot reload: запустить API на `127.0.0.1:18080` с `APP_ORIGIN=http://localhost:5173`, затем `pnpm --dir web dev`. Точный Vite proxy указан в `web/vite.config.ts`. Для обычных E2E собранную SPA отдаёт Go на порту 18080. Конфигурация и CLI: [backend/README.md](backend/README.md), frontend и браузерные тесты: [web/README.md](web/README.md).
+Для frontend hot reload: запустить API на `127.0.0.1:18080` с `APP_ORIGIN=http://localhost:5173`, затем `API_PROXY_TARGET=http://127.0.0.1:18080 pnpm --dir web dev`. Vite сохраняет браузерный Host и Origin. Для обычных E2E собранную SPA отдаёт Go на порту 18080. Конфигурация и CLI: [backend/README.md](backend/README.md), frontend и браузерные тесты: [web/README.md](web/README.md).
 
 Интеграционные тесты требуют **отдельную одноразовую БД**, не production:
 

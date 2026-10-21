@@ -3,7 +3,7 @@
 # Caddy must join EDGE_NETWORK and app TRUSTED_PROXIES must contain its exact peer IP.
 feedback.kreoniz.ru {
 	request_body {
-		max_size 32KB
+		max_size 64KB
 	}
 	@internal path /health/*
 	respond @internal 404
