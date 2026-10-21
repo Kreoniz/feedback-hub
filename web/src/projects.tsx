@@ -2,7 +2,7 @@ import type { Project } from "./domain";
 
 const icons: Record<string, string> = {
   campus: "/projects/campus.png",
-  "unlikely-ui": "/projects/unlikely-ui.svg",
+  "unlikely-ui": "/projects/unlikely-ui.png",
   other: "/projects/other.svg",
 };
 

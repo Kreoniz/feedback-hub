@@ -290,10 +290,10 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     const card = publicPage.locator(".feature-card").first();
     expect((await card.boundingBox())!.y).toBeLessThan(350);
     await expect(
-      card.getByRole("link", { name: "Marvin Campus" }),
+      card.getByRole("link", { name: "Кампус" }),
     ).toHaveAttribute("href", "https://campus.kreoniz.ru/");
     await expect(
-      card.getByRole("link", { name: "Marvin Campus" }).locator("img"),
+      card.getByRole("link", { name: "Кампус" }).locator("img"),
     ).toBeVisible();
     await publicPage.getByRole("button", { name: title, exact: true }).click();
     await expect(publicPage.getByRole("dialog")).toBeVisible();

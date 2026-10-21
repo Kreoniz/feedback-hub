@@ -12,7 +12,7 @@ import {
 const projects: Project[] = [
   {
     slug: "campus",
-    name: "Marvin Campus",
+    name: "Кампус",
     description: "",
     url: "https://campus.kreoniz.ru",
   },

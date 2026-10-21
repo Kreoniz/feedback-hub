@@ -19,7 +19,7 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("main")).toBeFocused();
-  await choose(page, "Проект", "Marvin Campus");
+  await choose(page, "Проект", "Кампус");
   await expect(page).toHaveURL(/project=campus/);
   await page
     .getByRole("searchbox", { name: "Поиск предложений" })
@@ -39,7 +39,7 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
     const items = Array.from({ length: offset ? 1 : 30 }, (_, index) => ({
       id: `00000000-0000-4000-8000-${String(index + offset + 1).padStart(12, "0")}`,
       project: "campus",
-      project_name: "Marvin Campus",
+      project_name: "Кампус",
       title: `Предложение ${index + offset + 1}`,
       description: "Проверка клавиатурной навигации.",
       status: "new",
@@ -173,8 +173,8 @@ test("skeletons replace initial and list loading; project icons stay in menu and
   }
   await page.getByRole("combobox", { name: "Проект", exact: true }).click();
   for (const [name, asset] of [
-    ["Marvin Campus", "campus.png"],
-    ["Unlikely UI", "unlikely-ui.svg"],
+    ["Кампус", "campus.png"],
+    ["Unlikely UI", "unlikely-ui.png"],
     ["Другое", "other.svg"],
   ]) {
     const icon = page.getByRole("option", { name, exact: true }).locator("img");
@@ -188,7 +188,7 @@ test("skeletons replace initial and list loading; project icons stay in menu and
   }
   await accessible(page);
   await page
-    .getByRole("option", { name: "Marvin Campus", exact: true })
+    .getByRole("option", { name: "Кампус", exact: true })
     .click();
   await expect(
     page.getByRole("combobox", { name: "Проект", exact: true }).locator("img"),

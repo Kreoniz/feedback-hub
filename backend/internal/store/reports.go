@@ -57,7 +57,7 @@ type Patch struct {
 	DuplicateOf                                          *string
 }
 
-var ProjectNames = map[string]string{"campus": "Marvin Campus", "unlikely-ui": "Unlikely UI", "other": "Другое"}
+var ProjectNames = map[string]string{"campus": "Кампус", "unlikely-ui": "Unlikely UI", "other": "Другое"}
 
 // ErrBudget deliberately applies to duplicates too once admission is paused, so
 // storage-budget state cannot become a private-content existence oracle.
