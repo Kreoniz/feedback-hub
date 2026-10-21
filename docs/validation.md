@@ -26,7 +26,7 @@
 
 CI-сбой: [run39567059571](https://github.com/Kreoniz/feedback-hub/actions/runs/39567059571). GitHub сообщил отказ до выполнения шагов из-за оплаты/spending limit; это **не успешный CI-прогон**. Основные команды workflow выполнены локально. Настройки оплаты не менялись.
 
-Проверенный runtime image: `feedback-hub:local`, digest `sha256:a2c1444c51ba3f6297f9f2307386ae5392b60858bd58a9c7f75f7547be646942`. Node24.22.0, pnpm12.5.1, Go1.27.3, PostgreSQL18.6, Caddy2.11.4, React19.3.1, `unlikely-ui@0.1.0-alpha.1`. Сжатые размеры сборки: JS139.18KB, CSS10.88KB — оценки Vite gzip, не замер production Core Web Vitals.
+Проверенный runtime image: `feedback-hub:2026-10-21-1` (также local), digest `sha256:57282d5190919a40927eaddabd4fe3f939add368b57af9aa5859d68031e7fe65`. Архив `.local/feedback-hub-2026-10-21-1.tar.gz`, 7.9MiB, SHA256 `8233957310467c790c9602ad0587b513650b2a604cf695980f0cebe90722eba0`, без runtime-секретов. Node24.22.0, pnpm12.5.1, Go1.27.3, PostgreSQL18.6, Caddy2.11.4, React19.3.1, `unlikely-ui@0.1.0-alpha.1`. Сжатые размеры сборки: JS139.18KB, CSS10.88KB — оценки Vite gzip, не замер production Core Web Vitals.
 
 Локальный стек доступен на `http://localhost:18080`, только loopback. На нём есть синтетические обращения приёмки; новых пользовательских данных не было. Пароль владельца — ignored `.local/admin-password`, здесь не публикуется.
 
@@ -49,6 +49,7 @@ CI-сбой: [run39567059571](https://github.com/Kreoniz/feedback-hub/actions/ru
 - [UX R1](review-ux-r1.md): внутренний overflow модального окна320px, потеря dirty draft, фокуса пагинации и coarse typography; исправлены и добавлены реальные регрессионные проверки.
 - [Application/UX R2](review-application-ux-r2.md): A1/A2 и UX R1–R4 закрыты, остаточных blockers не найдено.
 - [Infrastructure R1](review-infrastructure-r1.md), [R2](review-infrastructure-r2.md) и [backup R3](review-backup-r3.md): backup после restore, client_ip в error log, configured port, concurrent backups, CI ingress checks и неоднозначные URL. Итоговое решение использует pgx CLI вместо отдельного URL parser; restore-регрессия проверяет эффективный выбор и явные отказы.
+- [Backup R4](review-backup-r4.md): R1/F1/F2 закрыты. Независимый restore сохранил marker для path и обоих query aliases; оба F2 URL и10 других неверных targets отвергнуты до dump. Все10 CLI tests PASS. После добавления CLI повторены Docker build/start, CLI race и Go vet; новых HTTP/UI изменений не было.
 
 При проверке зависимостей найден GO-2026-6809 в Go1.27.2; toolchain/CI/Docker обновлены до1.27.3, затем race/integration/build и govulncheck повторены.
 
