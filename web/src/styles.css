@@ -11,7 +11,7 @@ body {
 button,
 input,
 textarea {
-  font: inherit;
+  font-family: inherit;
 }
 button,
 a,
@@ -1161,7 +1161,7 @@ ul {
   .editor-actions .button-row {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 380px) {

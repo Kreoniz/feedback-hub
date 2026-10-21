@@ -7,7 +7,7 @@ import { Input } from "unlikely-ui/input";
 import { api, ApiError, errorMessage } from "./api";
 import { dateLabel, listQuery, options, statusLabels } from "./domain";
 import type { Feature, Project } from "./domain";
-import { useFilters, useResource, useSearch } from "./hooks";
+import { useFilters, usePaginationFocus, useResource, useSearch } from "./hooks";
 import {
   EmptyState,
   ErrorNotice,
@@ -76,6 +76,7 @@ export function Board({ projects }: { projects: Project[] }) {
   }
   const filtered = !!(filters.project || filters.q || filters.status);
   const offset = Number(new URLSearchParams(query).get("offset"));
+  const resultsHeading = usePaginationFocus<HTMLHeadingElement>(offset);
   return (
     <>
       <section className="hero">
@@ -106,7 +107,7 @@ export function Board({ projects }: { projects: Project[] }) {
       <div className="board-layout">
         <section className="board-main" aria-label="Доска идей">
           <div className="section-heading">
-            <h2>Доска идей</h2>
+            <h2 ref={resultsHeading} tabIndex={-1}>Доска идей</h2>
             <Badge tone="neutral">Публично</Badge>
           </div>
           <div className="filter-panel">

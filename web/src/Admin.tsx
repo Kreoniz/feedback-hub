@@ -20,7 +20,7 @@ import {
   typeLabels,
 } from "./domain";
 import type { Project, Report, ReportPatch } from "./domain";
-import { useFilters, useResource, useSearch } from "./hooks";
+import { useFilters, usePaginationFocus, useResource, useSearch } from "./hooks";
 import { safeContextLink } from "./privacy";
 import {
   EmptyState,
@@ -216,6 +216,8 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
     !!(filters.status || filters.priority || filters.information),
   );
   const returnFocus = useRef<HTMLButtonElement | null>(null);
+  const dirtyEditor = useRef(false);
+  const onDirtyChange = useCallback((dirty: boolean) => { dirtyEditor.current = dirty; }, []);
   const filtered = [
     "project",
     "type",
@@ -237,8 +239,9 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
       offset: "",
     });
   const offset = Number(new URLSearchParams(query).get("offset"));
+  const resultsRegion = usePaginationFocus<HTMLElement>(offset);
   return (
-    <section aria-label="Список входящих">
+    <section aria-label="Список входящих" ref={resultsRegion} tabIndex={-1}>
       <div className="filter-panel admin-filters">
         <div className="search-field">
           <FormField label="Поиск сообщений" name="q">
@@ -451,7 +454,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
       <Dialog.Root
         open={!!selected}
         onOpenChange={(open) => {
-          if (!open) setSelected(null);
+          if (!open && (!dirtyEditor.current || window.confirm("Закрыть сообщение без сохранения изменений?"))) setSelected(null);
         }}
       >
         {selected && (
@@ -459,6 +462,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
             <ReportDetail
               id={selected}
               csrf={csrf}
+              onDirtyChange={onDirtyChange}
               onSaved={() => {
                 setNotice("Изменения сохранены.");
                 resource.reload();
@@ -475,10 +479,12 @@ function ReportDetail({
   id,
   csrf,
   onSaved,
+  onDirtyChange,
 }: {
   id: string;
   csrf: string;
   onSaved: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const resource = useResource(
     useCallback((signal: AbortSignal) => api.detail(id, signal), [id]),
@@ -519,6 +525,7 @@ function ReportDetail({
             key={resource.data.id}
             report={resource.data}
             csrf={csrf}
+            onDirtyChange={onDirtyChange}
             onSaved={(updated) => {
               resource.setData(updated);
               onSaved();
@@ -534,10 +541,12 @@ function ReportEditor({
   report,
   csrf,
   onSaved,
+  onDirtyChange,
 }: {
   report: Report;
   csrf: string;
   onSaved: (report: Report) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const pick = (value: Report): ReportPatch => ({
     status: value.status,
@@ -554,6 +563,10 @@ function ReportEditor({
   const [duplicateError, setDuplicateError] = useState("");
   const patch = reportPatch(report, draft);
   const dirty = Object.keys(patch).length > 0;
+  useEffect(() => {
+    onDirtyChange(dirty);
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
   const contextLink = safeContextLink(report.context?.page_url);
   const change = <K extends keyof ReportPatch>(
     key: K,

@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { filterValue } from "./domain";
 
+/** Keep keyboard navigation at a stable result landmark when paging replaces controls. */
+export function usePaginationFocus<T extends HTMLElement>(offset: number) {
+  const target = useRef<T>(null);
+  const previous = useRef(offset);
+  useEffect(() => {
+    if (previous.current !== offset) {
+      previous.current = offset;
+      target.current?.focus();
+    }
+  }, [offset]);
+  return target;
+}
+
 export function useResource<T>(loader: (signal: AbortSignal) => Promise<T>) {
   const [state, setState] = useState<{
     data?: T;
