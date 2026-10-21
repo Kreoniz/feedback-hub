@@ -352,21 +352,73 @@ ul {
   color: var(--u-muted);
 }
 .loading-state {
-  padding-block: 2rem;
+  padding-block: 1.5rem;
 }
-.loading-state > [role="status"] {
-  margin-inline: auto;
+.loading-cards {
+  padding: 0;
 }
 .skeleton-list {
   display: grid;
   gap: 0.75rem;
-  margin-top: 1.5rem;
 }
 .skeleton-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.125rem;
+  padding: 1.25rem;
+  box-shadow: none;
+  background: var(--u-surface);
+  border-color: var(--u-line-soft);
+}
+.skeleton-card-body {
+  display: grid;
+  gap: 0.875rem;
+  min-width: 0;
+  flex: 1;
+}
+.skeleton-vote {
+  width: 4.5rem;
+  height: 5.75rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.skeleton-meta {
+  width: 45%;
+  height: 0.875rem;
+}
+.skeleton-title {
+  width: 75%;
+  height: 1.375rem;
+}
+.skeleton-description {
+  width: 95%;
+  height: 1rem;
+}
+.skeleton-badge {
+  width: 4.5rem;
+  height: 1.375rem;
+}
+.skeleton-heading {
+  width: min(45%, 14rem);
+  height: 2rem;
+}
+.skeleton-action {
+  width: 7.5rem;
+  height: 2.75rem;
+}
+.skeleton-filter {
+  width: 100%;
+  height: 2.75rem;
+}
+.content-skeleton {
   display: grid;
   gap: 1rem;
-  padding: 1.75rem;
-  box-shadow: none;
+  max-width: 44rem;
+}
+.board-skeleton .list-heading {
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
 }
 .form-page {
   max-width: 700px;
@@ -987,7 +1039,7 @@ ul {
   gap: 1.125rem;
 }
 .vote-button.u-physical-button {
-  --u-physical-size: 3.75rem;
+  --u-physical-size: 4.5rem;
   flex-shrink: 0;
   align-self: flex-start;
   margin-top: 0.125rem;
@@ -1001,7 +1053,7 @@ ul {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -1145,5 +1197,40 @@ a.project-link:hover {
   }
   .feature-card {
     gap: 0.75rem;
+  }
+}
+
+.project-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.select-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.select-choice > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-select-trigger > span:first-child {
+  min-width: 0;
+}
+.hub-select-popup .u-select-item > span:first-child {
+  min-width: 0;
+}
+.feature-body > [role="alert"] {
+  margin-top: 0.875rem;
+}
+@media (max-width: 700px) {
+  .skeleton-card {
+    padding: 1rem;
+    gap: 0.875rem;
   }
 }

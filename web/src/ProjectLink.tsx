@@ -1,10 +1,5 @@
 import type { Project } from "./domain";
-
-const icons: Record<string, string> = {
-  campus: "/projects/campus.png",
-  other: "/projects/other.svg",
-  "unlikely-ui": "/projects/unlikely-ui.svg",
-};
+import { ProjectIcon } from "./projects";
 
 export function ProjectLink({
   project,
@@ -28,7 +23,7 @@ export function ProjectLink({
   }
   const content = (
     <>
-      {icons[slug] && <img src={icons[slug]} width="20" height="20" alt="" />}
+      <ProjectIcon slug={slug} />
       <span>{name}</span>
       {href && (
         <svg

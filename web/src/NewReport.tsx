@@ -1,3 +1,4 @@
+import { projectChoices } from "./projects";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Alert } from "unlikely-ui/alert";
@@ -207,10 +208,7 @@ export function NewReport({ projects }: { projects: Project[] }) {
             onChange={(project) => change("project", project)}
             error={errors.project}
             disabled={sending}
-            items={[
-              { value: "", label: "Выберите проект" },
-              ...projects.map((p) => ({ value: p.slug, label: p.name })),
-            ]}
+            items={projectChoices(projects, "Выберите проект")}
           />
           {draft.type === "feature" && (
             <FormField

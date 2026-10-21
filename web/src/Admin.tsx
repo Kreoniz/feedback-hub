@@ -1,3 +1,4 @@
+import { projectChoices } from "./projects";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Alert } from "unlikely-ui/alert";
@@ -20,7 +21,12 @@ import {
   typeLabels,
 } from "./domain";
 import type { Project, Report, ReportPatch } from "./domain";
-import { useFilters, usePaginationFocus, useResource, useSearch } from "./hooks";
+import {
+  useFilters,
+  usePaginationFocus,
+  useResource,
+  useSearch,
+} from "./hooks";
 import { safeContextLink } from "./privacy";
 import {
   EmptyState,
@@ -217,7 +223,9 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
   );
   const returnFocus = useRef<HTMLButtonElement | null>(null);
   const dirtyEditor = useRef(false);
-  const onDirtyChange = useCallback((dirty: boolean) => { dirtyEditor.current = dirty; }, []);
+  const onDirtyChange = useCallback((dirty: boolean) => {
+    dirtyEditor.current = dirty;
+  }, []);
   const filtered = [
     "project",
     "type",
@@ -262,10 +270,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
           name="project"
           value={filters.project}
           onChange={(project) => update({ project })}
-          items={[
-            { value: "", label: "Все проекты" },
-            ...projects.map((p) => ({ value: p.slug, label: p.name })),
-          ]}
+          items={projectChoices(projects)}
         />
         <SelectField
           label="Тип"
@@ -454,7 +459,12 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
       <Dialog.Root
         open={!!selected}
         onOpenChange={(open) => {
-          if (!open && (!dirtyEditor.current || window.confirm("Закрыть сообщение без сохранения изменений?"))) setSelected(null);
+          if (
+            !open &&
+            (!dirtyEditor.current ||
+              window.confirm("Закрыть сообщение без сохранения изменений?"))
+          )
+            setSelected(null);
         }}
       >
         {selected && (

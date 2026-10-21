@@ -11,7 +11,7 @@ import { Help } from "./Help";
 import { NewReport } from "./NewReport";
 import { api } from "./api";
 import { useResource } from "./hooks";
-import { ErrorNotice, Icon, Loading } from "./ui";
+import { BoardSkeleton, ErrorNotice, Icon, Loading } from "./ui";
 
 const loadProjects = (signal: AbortSignal) => api.projects(signal);
 
@@ -75,7 +75,11 @@ function App() {
       >
         <Boundary>
           {projects.loading ? (
-            <Loading label="Загружаем проекты" />
+            path === "/" ? (
+              <BoardSkeleton />
+            ) : (
+              <Loading label="Загружаем проекты" />
+            )
           ) : projects.error ? (
             <ErrorNotice error={projects.error} retry={projects.reload} />
           ) : (

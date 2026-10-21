@@ -7,7 +7,6 @@ import { Card } from "unlikely-ui/card";
 import { Field } from "unlikely-ui/field";
 import { Select } from "unlikely-ui/select";
 import { Skeleton } from "unlikely-ui/skeleton";
-import { Spinner } from "unlikely-ui/spinner";
 import { errorMessage } from "./api";
 import { MAX_OFFSET, PAGE_SIZE, statusLabels } from "./domain";
 import type { Status } from "./domain";
@@ -101,7 +100,15 @@ export function FormField({
   );
 }
 
-export type Choice = { value: string; label: string };
+export type Choice = { value: string; label: string; icon?: ReactNode };
+function ChoiceLabel({ item }: { item: Choice }) {
+  return (
+    <span className="select-choice">
+      {item.icon}
+      <span>{item.label}</span>
+    </span>
+  );
+}
 export function SelectField({
   label,
   value,
@@ -137,12 +144,17 @@ export function SelectField({
         disabled={disabled}
       >
         <Select.Trigger>
-          <Select.Value />
+          <Select.Value>
+            {(selected: string | null) => {
+              const item = items.find((item) => item.value === selected);
+              return item ? <ChoiceLabel item={item} /> : null;
+            }}
+          </Select.Value>
         </Select.Trigger>
         <Select.Content className="hub-select-popup">
           {items.map((item) => (
             <Select.Item key={item.value || "all"} value={item.value}>
-              {item.label}
+              <ChoiceLabel item={item} />
             </Select.Item>
           ))}
         </Select.Content>
@@ -175,6 +187,24 @@ export function ErrorNotice({
   );
 }
 
+function SkeletonCards() {
+  return (
+    <div className="skeleton-list" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <Card.Root key={i} className="skeleton-card">
+          <Skeleton className="skeleton-vote" />
+          <div className="skeleton-card-body">
+            <Skeleton className="skeleton-meta" />
+            <Skeleton className="skeleton-title" />
+            <Skeleton className="skeleton-description" />
+            <Skeleton className="skeleton-badge" />
+          </div>
+        </Card.Root>
+      ))}
+    </div>
+  );
+}
+
 export function Loading({
   label = "Загружаем…",
   cards = false,
@@ -183,20 +213,49 @@ export function Loading({
   cards?: boolean;
 }) {
   return (
-    <div className="loading-state" aria-busy="true">
-      <Spinner label={label} />
-      {cards && (
-        <div className="skeleton-list" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <Card.Root key={i} className="skeleton-card">
-              <Skeleton style={{ width: "45%", height: "1.2rem" }} />
-              <Skeleton style={{ width: "90%", height: "1rem" }} />
-              <Skeleton style={{ width: "65%", height: "1rem" }} />
-            </Card.Root>
-          ))}
+    <div
+      className={`loading-state ${cards ? "loading-cards" : ""}`}
+      aria-busy="true"
+    >
+      <span className="sr-only" role="status">
+        {label}
+      </span>
+      {cards ? (
+        <SkeletonCards />
+      ) : (
+        <div className="content-skeleton" aria-hidden="true">
+          <Skeleton className="skeleton-title" />
+          <Skeleton className="skeleton-description" />
+          <Skeleton className="skeleton-description" />
         </div>
       )}
     </div>
+  );
+}
+
+export function BoardSkeleton() {
+  return (
+    <section
+      className="board-skeleton"
+      aria-label="Загрузка предложений"
+      aria-busy="true"
+    >
+      <div aria-hidden="true">
+        <div className="board-heading">
+          <Skeleton className="skeleton-heading" />
+          <Skeleton className="skeleton-action" />
+        </div>
+        <div className="filter-panel board-filters">
+          {[0, 1, 2, 3].map((key) => (
+            <Skeleton className="skeleton-filter" key={key} />
+          ))}
+        </div>
+        <div className="list-heading">
+          <Skeleton className="skeleton-meta" />
+        </div>
+      </div>
+      <Loading cards label="Загружаем предложения" />
+    </section>
   );
 }
 
