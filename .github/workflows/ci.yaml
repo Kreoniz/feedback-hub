@@ -44,4 +44,5 @@ jobs:
       - run: docker build --tag feedback-hub-caddy:ci --file deploy/Dockerfile.caddy .
       - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.production:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - run: CADDY_TEST_IMAGE=feedback-hub-caddy:ci ./scripts/test-caddy-logs.sh
       - run: docker compose --env-file .env.example -f deploy/compose.production.yaml config --quiet
