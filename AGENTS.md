@@ -24,7 +24,7 @@ Automatic content dedupe is scoped to one signed visitor, unresolved reports and
 
 Undo voting retains the visitor/report row with `active=false`; inactive rows still consume their lifetime storage slot. Re-voting the same identity reactivates that row immediately. Never refund its quota, create tombstones for nonexistent votes, or clear/extend network cooldowns on undo/re-vote. Public/admin counts and visitor state must include active votes only. POST and DELETE share mutation guards, rate limits and report-row locking.
 
-Keep vote pending/error state local to its card; do not disable the whole board during one mutation. Preserve focus on busy controls, stable props for memoized cards, and a shared visitor bootstrap when voting concurrently. Use the library Skeleton for content loading without artificial minimum delays.
+Keep vote pending/error state local to its card; do not disable the whole board during one mutation. Check the clicked control as well as its siblings: pending vote buttons stay opaque. Preserve focus on busy controls, stable props for memoized cards, and a shared visitor bootstrap when voting concurrently. Use the library Skeleton for content loading without artificial minimum delays.
 
 Keep global anchor/font resets from overriding Unlikely UI's CSS layers, action foregrounds or coarse-pointer 16px typography. Verify the modal's own scroll width at 320px; document overflow checks alone miss clipped dialog actions. Dirty admin edits require explicit discard confirmation and remain out of persistent browser storage.
 
