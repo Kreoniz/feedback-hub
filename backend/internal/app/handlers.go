@@ -131,7 +131,9 @@ func (a *App) submit(w http.ResponseWriter, r *http.Request) {
 	}
 	// JSON encoding keeps field boundaries unambiguous, unlike concatenating content.
 	canonical, _ := json.Marshal([]string{input.Project, input.Type, normalize(input.Title), normalize(input.Description), normalize(input.Details)})
-	_, err = a.db.Submit(r.Context(), store.Submission{ID: uuid(), Project: input.Project, Type: input.Type, Title: input.Title, Description: input.Description, Details: input.Details, Context: c, Fingerprint: a.digest("dedupe", string(canonical))})
+	// Cross-visitor dedupe makes quota consumption a private-content oracle.
+	// Deduplicate this visitor's retries only; the owner links other duplicates.
+	_, err = a.db.Submit(r.Context(), store.Submission{ID: uuid(), Project: input.Project, Type: input.Type, Title: input.Title, Description: input.Description, Details: input.Details, Context: c, Fingerprint: a.digest("dedupe-visitor", visitor+"\x00"+string(canonical))})
 	if err != nil {
 		a.resultError(w, err)
 		return

@@ -3,6 +3,8 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +16,88 @@ import (
 	"feedback-hub/backend/internal/testutil"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func TestHTTPPrivateDedupeQuotaBoundary(t *testing.T) {
+	for _, boundary := range []string{"project", "global", "lifetime"} {
+		for _, exists := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/guessed-content-exists=%v", boundary, exists), func(t *testing.T) {
+				db := testutil.Database(t)
+				a := New(Config{Origin: "https://feedback.example", Secret: bytes.Repeat([]byte{7}, 32)}, db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+				now := time.Now()
+				a.now = func() time.Time { return now }
+				h := a.Handler()
+				request := func(method, path string, body any, cookies []*http.Cookie) *httptest.ResponseRecorder {
+					data, err := json.Marshal(body)
+					if err != nil {
+						t.Fatal(err)
+					}
+					r := httptest.NewRequest(method, a.cfg.Origin+path, bytes.NewReader(data))
+					r.RemoteAddr = "198.51.100.18:8000"
+					r.Header.Set("Origin", a.cfg.Origin)
+					r.Header.Set("Content-Type", "application/json")
+					for _, cookie := range cookies {
+						r.AddCookie(cookie)
+					}
+					w := httptest.NewRecorder()
+					h.ServeHTTP(w, r)
+					return w
+				}
+				proof := func() ([]*http.Cookie, string) {
+					w := request("GET", "/api/form", nil, nil)
+					var data struct {
+						Token string `json:"token"`
+					}
+					if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &data) != nil {
+						t.Fatal("form unavailable")
+					}
+					now = now.Add(3 * time.Second)
+					return w.Result().Cookies(), data.Token
+				}
+				firstCookies, firstToken := proof()
+				description := "unrelated historical private report"
+				if exists {
+					description = "guessed private content"
+				}
+				payload := map[string]any{"project": "campus", "type": "bug", "description": description, "form_token": firstToken}
+				if w := request("POST", "/api/reports", payload, firstCookies); w.Code != 201 {
+					t.Fatalf("seed status %d", w.Code)
+				}
+				switch boundary {
+				case "project":
+					_, err := db.Pool.Exec(t.Context(), `UPDATE intake_days SET accepted=$1 WHERE day=(now() AT TIME ZONE 'UTC')::date AND project='campus'`, store.MaxProjectDailyReports-1)
+					if err != nil {
+						t.Fatal(err)
+					}
+				case "global":
+					_, err := db.Pool.Exec(t.Context(), `UPDATE intake_days SET accepted=$1 WHERE day=(now() AT TIME ZONE 'UTC')::date AND project='*'`, store.MaxDailyReports-1)
+					if err != nil {
+						t.Fatal(err)
+					}
+				case "lifetime":
+					_, err := db.Pool.Exec(t.Context(), `UPDATE intake_totals SET reports=$1`, store.MaxTotalReports-1)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+				attackerCookies, attackerToken := proof()
+				payload["form_token"] = attackerToken
+				payload["description"] = "guessed private content"
+				if w := request("POST", "/api/reports", payload, attackerCookies); w.Code != 201 {
+					t.Fatalf("guess status %d", w.Code)
+				}
+				payload["description"] = "unique follow-up probe"
+				w := request("POST", "/api/reports", payload, attackerCookies)
+				if w.Code != 429 || w.Header().Get("Retry-After") == "" {
+					t.Fatalf("quota probe leaks cross-visitor match: %d %s", w.Code, w.Body)
+				}
+				var count int
+				if err := db.Pool.QueryRow(t.Context(), `SELECT count(*) FROM reports`).Scan(&count); err != nil || count != 2 {
+					t.Fatalf("different visitors must retain two independent reports: %d %v", count, err)
+				}
+			})
+		}
+	}
+}
 
 func TestHTTPDatabaseSecurityInvariants(t *testing.T) {
 	db := testutil.Database(t)
@@ -117,7 +201,7 @@ func TestHTTPDatabaseSecurityInvariants(t *testing.T) {
 		Items []store.Report `json:"items"`
 		Total int            `json:"total"`
 	}
-	if err = json.Unmarshal(reports.Body.Bytes(), &list); err != nil || list.Total != 1 {
+	if err = json.Unmarshal(reports.Body.Bytes(), &list); err != nil || list.Total != 2 {
 		t.Fatal("admin report missing")
 	}
 	bug := list.Items[0]

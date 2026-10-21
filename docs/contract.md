@@ -12,7 +12,7 @@ Same origin API; JSON only. Errors `{error: string}` with Russian user-safe mess
 
 `POST /api/features/{id}/vote` with JSON `{}` and same-origin → `{votes:number,voted:true}`. Idempotent positive vote only; no downvote or toggle. Requires anonymous cookie (GET form first). DB uniqueness visitor+report and per-IP cooldown prevent ordinary reset/concurrent duplication; document NAT tradeoff and limits. No voting on private or unapproved items.
 
-Dedupe suppresses identical normalized payloads for 24 hours while the previous report is unresolved. A report after `done`/`closed`, or after that window, creates a new entry so regressions are not silently lost. Transactional intake locking serializes the dedupe check and insert; public acceptance remains indistinguishable.
+Dedupe suppresses one visitor's identical normalized payloads for 24 hours while the previous report is unresolved. Different visitors always create separate reports: cross-visitor deduplication leaks content existence through quota consumption even with neutral replies. An owner can manually link those duplicates. A report after `done`/`closed`, or after the window, creates a new entry so regressions are not silently lost. Transactional intake locking serializes the dedupe check and insert; public acceptance remains indistinguishable.
 
 `POST /api/admin/login` `{password:string}` → `{authenticated:true,csrf_token:string}`; single configured owner, password hash, opaque HttpOnly server session, Secure production, SameSite Strict.
 

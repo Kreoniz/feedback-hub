@@ -165,7 +165,12 @@ func (s *Store) List(ctx context.Context, f Filter, public bool, visitor []byte)
 	}
 	if f.Q != "" {
 		args = append(args, f.Q)
-		where = append(where, `(strpos(lower(r.title),lower($`+itoa(len(args))+`))>0 OR strpos(lower(r.description),lower($`+itoa(len(args))+`))>0)`)
+		parameter := "$" + itoa(len(args))
+		search := `strpos(lower(r.title),lower(` + parameter + `))>0 OR strpos(lower(r.description),lower(` + parameter + `))>0`
+		if !public {
+			search += ` OR strpos(lower(r.details),lower(` + parameter + `))>0 OR strpos(lower(r.admin_note),lower(` + parameter + `))>0`
+		}
+		where = append(where, "("+search+")")
 	}
 	order := "r.created_at DESC,r.id"
 	switch f.Sort {

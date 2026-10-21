@@ -76,7 +76,7 @@ require(status == 201 and not result['duplicate'], 'Dedupe does not disclose pri
 require(public.request('POST', '/api/reports', {**bug, 'website': 'bot'})[0] == 201, 'Honeypot non-disclosing response')
 query = '?q=' + urllib.parse.quote(marker)
 status, inbox, _ = admin.request('GET', '/api/admin/reports' + query)
-require(status == 200 and inbox['total'] == 2, 'Dedupe and honeypot store no extra reports')
+require(status == 200 and inbox['total'] == 3, 'Own retries dedupe; other visitors remain independent')
 idea = next(x for x in inbox['items'] if x['type'] == 'feature')
 problem = next(x for x in inbox['items'] if x['type'] == 'bug')
 require('?' not in problem['context'].get('page_url', '') and '#' not in problem['context'].get('page_url', ''), 'Server strips sensitive URL parts')

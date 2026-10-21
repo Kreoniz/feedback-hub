@@ -27,6 +27,27 @@ func submit(t *testing.T, db *store.Store, id, typ, project string) {
 	}
 }
 func str(s string) *string { return &s }
+func TestDatabasePrivateSearchScope(t *testing.T) {
+	db := testutil.Database(t)
+	ctx := context.Background()
+	submit(t, db, id1, "feature", "campus")
+	if _, err := db.Update(ctx, id1, store.Patch{Moderation: str("approved"), AdminNote: str("PRIVATE_NOTE_ONLY")}); err != nil {
+		t.Fatal(err)
+	}
+	for _, public := range []bool{false, true} {
+		_, total, err := db.List(ctx, store.Filter{Q: "private_note_only", Limit: 30}, public, []byte{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := 1
+		if public {
+			expected = 0
+		}
+		if total != expected {
+			t.Fatalf("private note search public=%v total=%d", public, total)
+		}
+	}
+}
 func TestDatabaseDedupeAllowsRecurrences(t *testing.T) {
 	db := testutil.Database(t)
 	ctx := context.Background()
