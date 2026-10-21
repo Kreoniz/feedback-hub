@@ -108,8 +108,14 @@ test("compact inbox stretches rows and preserves the dialog exit transition", as
     page.getByRole("button", { name: "Фильтры · 1", exact: true }),
   ).toBeVisible();
   await page
+    .getByRole("searchbox", { name: "Поиск сообщений" })
+    .fill("ожидает поиска");
+  await page
     .getByRole("button", { name: "Сбросить фильтры", exact: true })
     .click();
+  await expect(
+    page.getByRole("searchbox", { name: "Поиск сообщений" }),
+  ).toHaveValue("");
   await expect(page).not.toHaveURL(/sort=priority/);
   await expect(
     page.getByRole("button", { name: "Фильтры", exact: true }),

@@ -205,11 +205,13 @@ test("skeletons replace initial and list loading; project icons stay in menu and
     const icon = page.getByRole("option", { name, exact: true }).locator("img");
     await expect(icon).toBeVisible();
     await expect(icon).toHaveAttribute("src", `/projects/${asset}`);
-    expect(
-      await icon.evaluate(
-        (el: HTMLImageElement) => el.complete && el.naturalWidth > 0,
-      ),
-    ).toBe(true);
+    await expect
+      .poll(() =>
+        icon.evaluate(
+          (el: HTMLImageElement) => el.complete && el.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
   }
   await accessible(page);
   await page.getByRole("option", { name: "Кампус", exact: true }).click();

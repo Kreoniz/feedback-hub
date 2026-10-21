@@ -237,7 +237,8 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
   const filtered =
     extraFilterCount > 0 ||
     ["project", "type", "q"].some((key) => !!filters[key]);
-  const reset = () =>
+  const reset = () => {
+    setSearch("");
     update({
       project: "",
       type: "",
@@ -249,6 +250,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
       offset: "",
       sort: "new",
     });
+  };
   const offset = Number(new URLSearchParams(query).get("offset"));
   const resultsRegion = usePaginationFocus<HTMLElement>(offset);
   return (

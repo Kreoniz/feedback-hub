@@ -42,6 +42,11 @@ export function Board({ projects }: { projects: Project[] }) {
     [update],
   );
   const [search, setSearch] = useSearch(filters.q, searchChange);
+  function reset() {
+    // Clear pending input too: its debounce may not have reached the URL yet.
+    setSearch("");
+    update({ project: "", q: "", status: "", offset: "" });
+  }
   const visitorProof = useRef<Promise<unknown> | null>(null);
   const [announcement, setAnnouncement] = useState("");
   // Share the initial proof even when separate cards are clicked concurrently.
@@ -155,9 +160,7 @@ export function Board({ projects }: { projects: Project[] }) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() =>
-                update({ project: "", q: "", status: "", offset: "" })
-              }
+              onClick={reset}
             >
               Сбросить
               <Icon name="close" />
@@ -177,9 +180,7 @@ export function Board({ projects }: { projects: Project[] }) {
               {!resource.data.items.length ? (
                 <EmptyState
                   filtered={filtered || !!offset}
-                  reset={() =>
-                    update({ project: "", q: "", status: "", offset: "" })
-                  }
+                  reset={reset}
                 />
               ) : (
                 <ul className="feature-list">
