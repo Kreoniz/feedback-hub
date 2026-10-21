@@ -22,6 +22,11 @@ export function useResource<T>(loader: (signal: AbortSignal) => Promise<T>) {
   }>({ loading: true });
   const [revision, setRevision] = useState(0);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
+  const updateData = useCallback(
+    (update: (data: T | undefined) => T | undefined) =>
+      setState((current) => ({ ...current, data: update(current.data) })),
+    [],
+  );
   useEffect(() => {
     const controller = new AbortController();
     setState({ loading: true });
@@ -39,8 +44,7 @@ export function useResource<T>(loader: (signal: AbortSignal) => Promise<T>) {
     ...state,
     reload,
     setData: (data: T) => setState({ data, loading: false }),
-    updateData: (update: (data: T | undefined) => T | undefined) =>
-      setState((current) => ({ ...current, data: update(current.data) })),
+    updateData,
   };
 }
 

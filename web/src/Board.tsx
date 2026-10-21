@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "unlikely-ui/button";
 import { Card } from "unlikely-ui/card";
 import { Dialog } from "unlikely-ui/dialog";
 import { Input } from "unlikely-ui/input";
 import { PhysicalButton } from "unlikely-ui/physical-button";
 import { ProjectLink } from "./ProjectLink";
+import { projectChoices } from "./projects";
 import { api, ApiError, errorMessage } from "./api";
 import { dateLabel, listQuery, options, statusLabels } from "./domain";
 import type { Feature, Project } from "./domain";
@@ -41,31 +42,25 @@ export function Board({ projects }: { projects: Project[] }) {
     [update],
   );
   const [search, setSearch] = useSearch(filters.q, searchChange);
-  const [voteError, setVoteError] = useState("");
-  const [voting, setVoting] = useState<string | null>(null);
-  const [visitorReady, setVisitorReady] = useState(false);
+  const visitorProof = useRef<Promise<unknown> | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    api.form(controller.signal).then(
-      () => setVisitorReady(true),
-      () => {},
-    );
-    return () => controller.abort();
+  // Share the initial proof even when separate cards are clicked concurrently.
+  const ensureVisitor = useCallback(() => {
+    if (!visitorProof.current) {
+      visitorProof.current = api.form().catch((error) => {
+        visitorProof.current = null;
+        throw error;
+      });
+    }
+    return visitorProof.current;
   }, []);
-  async function vote(feature: Feature) {
-    if (voting) return;
-    setVoting(feature.id);
-    setVoteError("");
-    try {
-      if (!visitorReady) {
-        await api.form();
-        setVisitorReady(true);
-      }
-      const result = await (feature.voted
-        ? api.unvote(feature.id)
-        : api.vote(feature.id));
-      resource.updateData((data) =>
+  useEffect(() => {
+    void ensureVisitor().catch(() => {});
+  }, [ensureVisitor]);
+  const { updateData } = resource;
+  const voteChanged = useCallback(
+    (feature: Feature, result: Pick<Feature, "votes" | "voted">) => {
+      updateData((data) =>
         data
           ? {
               ...data,
@@ -80,12 +75,9 @@ export function Board({ projects }: { projects: Project[] }) {
           ? `Вы поддержали предложение «${feature.title}».`
           : `Голос за предложение «${feature.title}» отменён.`,
       );
-    } catch (error) {
-      setVoteError(errorMessage(error));
-    } finally {
-      setVoting(null);
-    }
-  }
+    },
+    [updateData],
+  );
   const filtered = !!(filters.project || filters.q || filters.status);
   const offset = Number(new URLSearchParams(query).get("offset"));
   const resultsHeading = usePaginationFocus<HTMLHeadingElement>(offset);
@@ -128,10 +120,7 @@ export function Board({ projects }: { projects: Project[] }) {
             name="project"
             value={filters.project}
             onChange={(project) => update({ project })}
-            items={[
-              { value: "", label: "Все проекты" },
-              ...projects.map((p) => ({ value: p.slug, label: p.name })),
-            ]}
+            items={projectChoices(projects)}
           />
           <SelectField
             label="Статус"
@@ -175,12 +164,6 @@ export function Board({ projects }: { projects: Project[] }) {
             </Button>
           )}
         </div>
-        {voteError && (
-          <ErrorNotice
-            error={new ApiError(voteError)}
-            title="Не удалось изменить голос"
-          />
-        )}
         <div className="sr-only" role="status">
           {announcement}
         </div>
@@ -207,10 +190,8 @@ export function Board({ projects }: { projects: Project[] }) {
                         project={projects.find(
                           (p) => p.slug === feature.project,
                         )}
-                        vote={() => vote(feature)}
-                        voting={voting === feature.id}
-                        otherVoting={!!voting}
-                        error={voteError}
+                        ensureVisitor={ensureVisitor}
+                        onVoteChange={voteChanged}
                       />
                     </li>
                   ))}
@@ -229,21 +210,42 @@ export function Board({ projects }: { projects: Project[] }) {
   );
 }
 
-function FeatureCard({
+const FeatureCard = memo(function FeatureCard({
   feature,
   project,
-  vote,
-  voting,
-  otherVoting,
-  error,
+  ensureVisitor,
+  onVoteChange,
 }: {
   feature: Feature;
   project?: Project;
-  vote: () => void;
-  voting: boolean;
-  otherVoting: boolean;
-  error: string;
+  ensureVisitor: () => Promise<unknown>;
+  onVoteChange: (
+    feature: Feature,
+    result: Pick<Feature, "votes" | "voted">,
+  ) => void;
 }) {
+  const [voting, setVoting] = useState(false);
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+  const inFlight = useRef(false);
+  async function vote() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setVoting(true);
+    setError("");
+    try {
+      await ensureVisitor();
+      const result = await (feature.voted
+        ? api.unvote(feature.id)
+        : api.vote(feature.id));
+      onVoteChange(feature, result);
+    } catch (failure) {
+      setError(errorMessage(failure));
+    } finally {
+      inFlight.current = false;
+      setVoting(false);
+    }
+  }
   return (
     <Card.Root className="feature-card">
       <PhysicalButton
@@ -260,7 +262,8 @@ function FeatureCard({
         aria-label={`${feature.voted ? "Отменить голос" : "Поддержать"}: ${feature.title}. Голосов: ${feature.votes}`}
         aria-pressed={feature.voted}
         aria-busy={voting}
-        disabled={otherVoting}
+        disabled={voting}
+        focusableWhenDisabled
         onClick={vote}
       >
         <span className="vote-cap">
@@ -280,7 +283,7 @@ function FeatureCard({
             {dateLabel(feature.created_at)}
           </time>
         </div>
-        <Dialog.Root>
+        <Dialog.Root open={open} onOpenChange={setOpen}>
           <h3>
             <Dialog.Trigger
               render={<Button variant="ghost" className="feature-title" />}
@@ -292,6 +295,12 @@ function FeatureCard({
           <div className="feature-footer">
             <StatusBadge status={feature.status} />
           </div>
+          {error && !open && (
+            <ErrorNotice
+              error={new ApiError(error)}
+              title="Не удалось изменить голос"
+            />
+          )}
           <Dialog.Content className="idea-dialog">
             <div className="dialog-heading">
               <ProjectLink
@@ -317,7 +326,7 @@ function FeatureCard({
               {statusLabels[feature.status]}.
             </Dialog.Description>
             <p className="user-content">{feature.description}</p>
-            {error && (
+            {error && open && (
               <ErrorNotice
                 error={new ApiError(error)}
                 title="Не удалось изменить голос"
@@ -327,7 +336,7 @@ function FeatureCard({
               <StatusBadge status={feature.status} />
               <Button
                 onClick={vote}
-                disabled={otherVoting}
+                disabled={voting}
                 loading={voting}
                 variant={feature.voted ? "secondary" : "primary"}
               >
@@ -341,4 +350,4 @@ function FeatureCard({
       </div>
     </Card.Root>
   );
-}
+});
