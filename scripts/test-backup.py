@@ -65,7 +65,7 @@ try:
             url.write_text(f'postgres://feedback@db:5432/feedback?{selector}={databases[0]}&sslmode=disable\n')
             subprocess.run(['bash', str(fixture / 'scripts/backup.sh')], env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             selected = max((fixture / '.local/backups').glob('*.dump'), key=lambda p:p.stat().st_mtime_ns)
-            assert b'post-restore-marker' in pg('pg_restore','-a','-t','backup_probe',data=selected.read_bytes()), 'Effective query database not backed up'
+            assert b'post-restore-marker' in pg('pg_restore','-a','-t','backup_probe','-f','-',data=selected.read_bytes()), 'Effective query database not backed up'
         archives = set((fixture / '.local/backups').glob('*.dump'))
         for selector in ('host','port','user'):
             url.write_text(f'postgres://feedback@db:5432/feedback?{selector}={databases[0]}&sslmode=disable\n')
