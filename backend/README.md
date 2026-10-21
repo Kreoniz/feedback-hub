@@ -86,6 +86,8 @@ Integration tests skip explicitly when DATABASE_URL_TEST is unset. Tests cover r
 
 ## Primary sources checked 2026-10-21
 
+`feedback-hub backup-target` reads only DATABASE_URL[_FILE], parses it with the same pinned pgx as `serve`, and prints the checked effective database name. It neither connects nor prints credentials. It accepts only host `db`, port5432, role `feedback`, no alternate host and a simple ASCII name. Query database aliases are honored; unsupported effective targets fail. This CLI is for the Compose backup script, not a public API.
+
 Integration refinement: exact-content dedupe is scoped to the **same signed visitor identity** and unresolved reports from the preceding **24 hours**. Different visitors create independent rows, even for identical text, so quota transitions cannot disclose another visitor's private content. The owner links duplicates manually. Cookie reset can create another row; endpoint/global quotas bound it. A recurrence after resolution (`done`/`closed`) is accepted immediately. The existing transaction ledger lock serializes check/insert; migration003 removes permanent fingerprint uniqueness. Public receipts remain neutral. Regression tests cover retries, next-day/resolved recurrence and two-request observations at project/global/lifetime quota boundaries. Admin search includes title, description, details and private notes; public search includes title/description only.
 
 - [Go net/http](https://pkg.go.dev/net/http): server timeouts, bounded bodies and graceful shutdown. The local mise toolchain used for tests is Go 1.27.2; module baseline is 1.27.0. Deployment should use the lead's patched toolchain pin.

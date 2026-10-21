@@ -20,7 +20,7 @@
 | Local и production Compose/Caddy syntax | PASS |
 | Caddy error logger при настоящем 502 | PASS: без client_ip/remote_ip, URL, headers, cookie |
 | pg_dump → отдельная restore DB → следующие записи → новый backup → вторая restore DB | PASS: обращения/голоса сохранены, post-restore marker включён |
-| Unsupported backup URL selectors | PASS: dbname/database/host/port/user overrides отвергаются без публикации архива |
+| Backup target selection | pgx CLI учитывает dbname/database; неподдерживаемые host/port/user и неоднозначные имена отвергаются до dump |
 | PostgreSQL app-role | NOSUPERUSER, NOCREATEDB, NOCREATEROLE подтверждены |
 | GitHub Actions | workflow настроен; runner не стартовал из-за billing/spending limit аккаунта |
 
@@ -48,7 +48,7 @@ CI-сбой: [run39567059571](https://github.com/Kreoniz/feedback-hub/actions/ru
 - [Application R1](review-application-r1.md): квотная утечка cross-visitor дедупликации и несоответствие поиска заметок; исправлены visitor-scoped dedupe и отдельным admin search predicate.
 - [UX R1](review-ux-r1.md): внутренний overflow модального окна320px, потеря dirty draft, фокуса пагинации и coarse typography; исправлены и добавлены реальные регрессионные проверки.
 - [Application/UX R2](review-application-ux-r2.md): A1/A2 и UX R1–R4 закрыты, остаточных blockers не найдено.
-- [Infrastructure R1](review-infrastructure-r1.md) и [R2](review-infrastructure-r2.md): backup после restore, client_ip в error log, configured port, concurrent backups, CI ingress checks. После R2 дополнительно запрещены неподдерживаемые database-query overrides; это подтверждено restore-регрессией.
+- [Infrastructure R1](review-infrastructure-r1.md), [R2](review-infrastructure-r2.md) и [backup R3](review-backup-r3.md): backup после restore, client_ip в error log, configured port, concurrent backups, CI ingress checks и неоднозначные URL. Итоговое решение использует pgx CLI вместо отдельного URL parser; restore-регрессия проверяет эффективный выбор и явные отказы.
 
 При проверке зависимостей найден GO-2026-6809 в Go1.27.2; toolchain/CI/Docker обновлены до1.27.3, затем race/integration/build и govulncheck повторены.
 

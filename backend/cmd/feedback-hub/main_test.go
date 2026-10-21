@@ -10,6 +10,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func TestBackupTargetMatchesEffectivePGXSelection(t *testing.T) {
+	for _, tt := range []struct{ dsn, expected string }{
+		{"postgres://feedback@db:5432/feedback?sslmode=disable", "feedback"},
+		{"postgres://feedback:secret@db:5432/old?dbname=restored&sslmode=disable", "restored"},
+		{"postgres://feedback@db/old?database=restored&sslmode=disable", "restored"},
+		{"postgres://feedback@db:5432//feedback", ""},
+		{"postgres://feedback@db:5432/feedback#", ""},
+		{"postgres://feedback@other/feedback", ""},
+		{"postgres://feedback@db:5433/feedback", ""},
+		{"postgres://other@db/feedback", ""},
+		{"postgres://feedback@db/feedback?host=other", ""},
+		{"postgres://feedback@db/feedback?dbname=bad.name", ""},
+	} {
+		t.Run(tt.dsn, func(t *testing.T) {
+			name, err := backupTarget(tt.dsn)
+			if tt.expected == "" {
+				if err == nil {
+					t.Fatal("unsupported backup target accepted")
+				}
+				return
+			}
+			if err != nil || name != tt.expected {
+				t.Fatalf("target=%q err=%v", name, err)
+			}
+		})
+	}
+}
+
 func TestPasswordCLIStdinAndBounds(t *testing.T) {
 	for _, tt := range []struct {
 		password string

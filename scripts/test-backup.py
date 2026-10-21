@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Restore a local backup into new databases; never overwrite the live database."""
-import json
 import os
 from pathlib import Path
 import shutil
@@ -44,12 +43,11 @@ try:
         shutil.copy2(root / 'scripts/backup.sh', fixture / 'scripts/backup.sh')
         url = fixture / 'database_url'
         url.write_text(f'postgres://feedback@db:5432/{databases[0]}?sslmode=disable\n')
-        config = {'services': {'app': {'environment': {'DATABASE_URL_FILE': '/run/secrets/database_url'}, 'volumes': [{'target': '/run/secrets/database_url', 'source': str(url)}]}}}
         # Adapt only Compose transport; execute the real backup/dump/list commands.
         adapter = fixture / 'bin/docker'
         adapter.write_text('#!/usr/bin/env python3\nimport json,os,sys\n'
-            + f'config={config!r}\n'
-            + "if sys.argv[1:]==['compose','config','--format','json']: print(json.dumps(config))\n"
+            + "if sys.argv[1:]==['compose','exec','-T','app','feedback-hub','backup-target']:\n"
+            + f" os.execv({docker!r},[{docker!r},'run','--rm','--network','none','-e','DATABASE_URL_FILE=/run/secrets/database_url','-v',{str(url)+':/run/secrets/database_url:ro,z'!r},{os.environ.get('FEEDBACK_IMAGE','feedback-hub:local')!r},'backup-target'])\n"
             + "elif sys.argv[1:5]==['compose','exec','-T','db']:\n"
             + f" os.execv({docker!r},[{docker!r},'exec','-i',{container!r}]+sys.argv[5:])\n"
             + "else: raise SystemExit('Unsupported regression transport')\n")
@@ -63,12 +61,23 @@ try:
         assert original_counts == restored_counts, 'Report/vote counts changed during restore'
         assert marker == b'post-restore-marker', 'Next backup omitted post-restore data'
         archives = set((fixture / '.local/backups').glob('*.dump'))
-        for selector in ('dbname','database','host','port','user'):
+        for selector in ('dbname','database'):
+            url.write_text(f'postgres://feedback@db:5432/feedback?{selector}={databases[0]}&sslmode=disable\n')
+            subprocess.run(['bash', str(fixture / 'scripts/backup.sh')], env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            selected = max((fixture / '.local/backups').glob('*.dump'), key=lambda p:p.stat().st_mtime_ns)
+            assert b'post-restore-marker' in pg('pg_restore','-a','-t','backup_probe',data=selected.read_bytes()), 'Effective query database not backed up'
+        archives = set((fixture / '.local/backups').glob('*.dump'))
+        for selector in ('host','port','user'):
             url.write_text(f'postgres://feedback@db:5432/feedback?{selector}={databases[0]}&sslmode=disable\n')
             result = subprocess.run(['bash', str(fixture / 'scripts/backup.sh')], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             assert result.returncode != 0, f'Unsafe {selector} override accepted'
             assert set((fixture / '.local/backups').glob('*.dump')) == archives, 'Failed selector published a backup'
-        print('PASS: restore, counts, selected path, post-restore backup, and fail-closed query overrides')
+        for invalid in ('postgres://feedback@db:5432//feedback','postgres://feedback@db:5432/feedback#'):
+            url.write_text(invalid+'\n')
+            result = subprocess.run(['bash', str(fixture / 'scripts/backup.sh')], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            assert result.returncode != 0, 'Ambiguous unsupported name accepted'
+            assert set((fixture / '.local/backups').glob('*.dump')) == archives, 'Unsupported name published archive'
+        print('PASS: restore, counts, pgx path/query selection, post-restore backup, and rejected unsupported targets')
 finally:
     for database in reversed(created):
         pg('dropdb', database)

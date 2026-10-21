@@ -38,7 +38,7 @@ python3 scripts/test-backup.py     # separate restore DBs; never overwrites live
 ./scripts/backup.sh               # production: add --production
 ```
 
-Integration tests create random schemas and remove only those schemas. If DATABASE_URL_TEST is unset they skip explicitly; never report them as executed. A complete browser run creates three reports and uses one worker to stay below real intake quotas. Backup supports the local Compose `db:5432` URL path only and fails closed on query overrides/remote topology. Docker Compose production is a separate file, not an override of local Compose.
+Integration tests create random schemas and remove only those schemas. If DATABASE_URL_TEST is unset they skip explicitly; never report them as executed. A complete browser run creates three reports and uses one worker to stay below real intake quotas. Backup resolves the effective target through the same pinned pgx parser via the read-only `backup-target` CLI in the running app; only local `db:5432`, role `feedback` and simple database names are supported. Never implement another DSN parser. Docker Compose production is a separate file, not an override of local Compose.
 
 ## Workflow
 
