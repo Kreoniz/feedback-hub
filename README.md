@@ -49,6 +49,8 @@ pnpm --dir web exec playwright install --with-deps firefox
 
 PostgreSQL-тесты создают/чистят собственные fixtures; URL должен указывать только на тестовую БД. `scripts/test-e2e.sh` запускает настоящий Go API, использует случайный тестовый admin-пароль и завершает процесс после тестов. Логи/артефакты остаются в ignored `.local` и `web/test-results`. CI запускает Go vet/race, TypeScript, unit, PostgreSQL, Playwright и Docker build. Результаты конкретной проверки — в [docs/validation.md](docs/validation.md), актуальные взаимодействия и deploy-образ — в [отдельном отчёте](docs/validation-interactions.md).
 
+По умолчанию включена тёмная тема. Выбор светлой или тёмной темы сохраняется между страницами и после обновления в `localStorage`; при недоступном storage переключение работает до перезагрузки.
+
 ## Подключение проектов
 
 Обычная ссылка не требует SDK или доступа к cookies проекта:
@@ -72,7 +74,7 @@ PostgreSQL-тесты создают/чистят собственные fixture
 
 ## VPS
 
-Целевой домен **feedback.kreoniz.ru**. Готовы [production Compose](deploy/compose.production.yaml), [фрагмент Caddy](deploy/Caddyfile.production) и [runbook](docs/deployment.md). Предполагается существующий Caddy в общей Docker-сети. Сборку выполнять локально/в CI, на VPS переносить готовый образ. **Production не развёрнут; DNS и работающие сервисы не изменены.** Применение к общей инфраструктуре — отдельный разрешённый шаг.
+Production: **https://feedback.kreoniz.ru**, админка: **https://feedback.kreoniz.ru/admin**. Развёрнуто 21.10.2026 отдельным Docker Compose стеком с PostgreSQL и существующим Caddy; [акт релиза](docs/deployment-2026-10-21.md). [Production Compose](deploy/compose.production.yaml), [фрагмент Caddy](deploy/Caddyfile.production) и [runbook](docs/deployment.md) описывают обновление и восстановление. Сборку выполнять локально/в CI, на VPS переносить готовый образ. Production-пароль создан отдельно и хранится вне Git.
 
 Telegram, GitHub Issues, вложения, комментарии, аккаунты посетителей и автоматическая LLM-классификация отложены. При добавлении уведомлений понадобится транзакционный outbox; сейчас отдельная очередь и интеграционные абстракции не нужны.
 
