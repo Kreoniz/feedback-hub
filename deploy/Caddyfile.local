@@ -19,6 +19,8 @@
 				request>uri delete
 				request>headers delete
 				request>remote_ip delete
+				request>client_ip delete
+				request>remote_port delete
 			}
 		}
 	}
