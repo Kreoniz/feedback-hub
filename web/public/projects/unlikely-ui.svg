@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="cap" cx="35%" cy="25%" r="80%">
+      <stop stop-color="#ff8375" />
+      <stop offset="0.45" stop-color="#ff4b46" />
+      <stop offset="1" stop-color="#e52830" />
+    </radialGradient>
+  </defs>
+  <circle cx="16" cy="16" r="15.5" fill="#252a24" />
+  <circle
+    cx="16"
+    cy="16"
+    r="13.75"
+    fill="none"
+    stroke="#ffdc32"
+    stroke-width="2.5"
+    stroke-dasharray="15 6.59845"
+    transform="rotate(-76.25 16 16)"
+  />
+  <circle cx="16" cy="16" r="11.75" fill="url(#cap)" />
+</svg>
