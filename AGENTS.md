@@ -28,6 +28,8 @@ Keep vote pending/error state local to its card; do not disable the whole board 
 
 Keep global anchor/font resets from overriding Unlikely UI's CSS layers, action foregrounds or coarse-pointer 16px typography. Verify the modal's own scroll width at 320px; document overflow checks alone miss clipped dialog actions. Dirty admin edits require explicit discard confirmation and remain out of persistent browser storage.
 
+Keep dialog content mounted through the library's exit phase; clear the selected record only in `onOpenChangeComplete(false)`. Check motion with normal and reduced-motion settings, and restore focus to the current row after list refresh. Admin notes are absent from the UI; do not erase legacy database content when simplifying views. Collapsed filters must indicate nondefault settings and reset sorting as well.
+
 ## Commands
 
 ```sh
