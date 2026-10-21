@@ -10,7 +10,7 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Что улучшить дальше?",
+    "Предложения",
   );
   await expect(page.getByText(/^Найдено:/)).toBeVisible();
   await page.keyboard.press("Tab");
@@ -22,24 +22,40 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   await choose(page, "Проект", "Marvin Campus");
   await expect(page).toHaveURL(/project=campus/);
   await page
-    .getByRole("searchbox", { name: "Поиск идей" })
+    .getByRole("searchbox", { name: "Поиск предложений" })
     .fill("несуществующая-идея-e2e");
   await expect(
     page.getByRole("heading", { name: "Ничего не нашлось" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Сбросить фильтры" }).click();
-  await expect(page.getByRole("searchbox", { name: "Поиск идей" })).toHaveValue(
-    "",
-  );
+  await expect(
+    page.getByRole("searchbox", { name: "Поиск предложений" }),
+  ).toHaveValue("");
   await noHorizontalOverflow(page);
   await accessible(page);
+  await page
+    .getByRole("button", { name: "Как это работает", exact: true })
+    .click();
+  await expect(
+    page.getByText("Предложения публикуются после проверки.", { exact: false }),
+  ).toBeVisible();
+  await page.getByText("Голосование и приватность", { exact: true }).click();
+  await expect(
+    page.getByText("Голос связан с cookie", { exact: false }),
+  ).toBeVisible();
+  await noHorizontalOverflow(page);
+  await accessible(page);
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Как это работает", exact: true }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Включить тёмную тему" }).click();
   await accessible(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await noHorizontalOverflow(page);
   await page.goto("/new?project=campus&type=bug");
   await expect(
-    page.getByRole("heading", { name: "Расскажите об ошибке." }),
+    page.getByRole("heading", { name: "Обратная связь" }),
   ).toBeVisible();
   await expect(
     page.getByRole("textbox", { name: "Название идеи" }),
@@ -51,7 +67,11 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
     page.getByText(/Добавим безопасные сведения о браузере/),
   ).toBeVisible();
   await page.setViewportSize({ width: 320, height: 740 });
-  expect(await page.getByRole("textbox", { name: "Что случилось?" }).evaluate(el => getComputedStyle(el).fontSize)).toBe("16px");
+  expect(
+    await page
+      .getByRole("textbox", { name: "Что случилось?" })
+      .evaluate((el) => getComputedStyle(el).fontSize),
+  ).toBe("16px");
   await noHorizontalOverflow(page);
   await accessible(page);
   await page.getByText("Добавить подробности", { exact: false }).click();

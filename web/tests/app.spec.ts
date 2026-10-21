@@ -115,11 +115,15 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
   await page.setViewportSize({ width: 320, height: 568 });
   const editor = page.getByRole("dialog");
   await page.getByRole("button", { name: "Сохранить", exact: true }).focus();
-  expect(await editor.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
-  page.once("dialog", dialog => dialog.dismiss());
+  expect(await editor.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  page.once("dialog", (dialog) => dialog.dismiss());
   await page.keyboard.press("Escape");
   await expect(editor).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Заметка администратора" })).toHaveValue(`${marker}-PRIVATE-NOTE`);
+  await expect(
+    page.getByRole("textbox", { name: "Заметка администратора" }),
+  ).toHaveValue(`${marker}-PRIVATE-NOTE`);
   await noHorizontalOverflow(page);
   await accessible(page);
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
@@ -157,11 +161,45 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     expect(publicJSON).not.toContain(bugText);
     await publicPage.getByRole("button", { name: /^Поддержать:/ }).click();
     await expect(
-      publicPage.getByRole("button", { name: /^Вы поддержали:/ }),
-    ).toBeDisabled();
+      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+    ).toBeEnabled();
     await publicPage.reload();
     await expect(
-      publicPage.getByRole("button", { name: /^Вы поддержали:/ }),
+      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+    ).toBeVisible();
+    // A failed undo must retain the selected state, then a real DELETE removes only this vote.
+    await publicPage.route("**/api/features/*/vote", (route) =>
+      route.request().method() === "DELETE"
+        ? route.abort("failed")
+        : route.continue(),
+    );
+    await publicPage.getByRole("button", { name: /^Отменить голос:/ }).click();
+    await expect(
+      publicPage.getByText("Не удалось изменить голос", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await publicPage.unroute("**/api/features/*/vote");
+    await publicPage.getByRole("button", { name: /^Отменить голос:/ }).click();
+    await expect(
+      publicPage.getByRole("button", { name: /^Поддержать:/ }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await publicPage.reload();
+    await expect(
+      publicPage.getByRole("button", { name: /^Поддержать:/ }),
+    ).toBeVisible();
+    await publicPage.getByRole("button", { name: /^Поддержать:/ }).click();
+    await expect(
+      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const card = publicPage.locator(".feature-card").first();
+    expect((await card.boundingBox())!.y).toBeLessThan(350);
+    await expect(
+      card.getByRole("link", { name: "Marvin Campus" }),
+    ).toHaveAttribute("href", "https://campus.kreoniz.ru/");
+    await expect(
+      card.getByRole("link", { name: "Marvin Campus" }).locator("img"),
     ).toBeVisible();
     await publicPage.getByRole("button", { name: title, exact: true }).click();
     await expect(publicPage.getByRole("dialog")).toBeVisible();
