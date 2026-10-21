@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.local/
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+backend/bin/
+*.log
+*.sql.gz
+.DS_Store
