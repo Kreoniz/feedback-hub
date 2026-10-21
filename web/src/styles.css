@@ -945,6 +945,11 @@ ul {
   letter-spacing: -0.035em;
   outline: none;
 }
+.board-heading h1:focus-visible {
+  outline: var(--u-focus-width) solid var(--u-focus);
+  outline-offset: 6px;
+  border-radius: var(--u-radius-xs);
+}
 .board-heading > a {
   flex-shrink: 0;
 }

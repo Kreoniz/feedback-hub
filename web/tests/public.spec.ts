@@ -31,6 +31,45 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   await expect(
     page.getByRole("searchbox", { name: "Поиск предложений" }),
   ).toHaveValue("");
+  // Read-only pagination fixture: real mutation scenarios remain in app.spec.ts.
+  await page.route("**/api/features?**", (route) => {
+    const offset = Number(
+      new URL(route.request().url()).searchParams.get("offset"),
+    );
+    const items = Array.from({ length: offset ? 1 : 30 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + offset + 1).padStart(12, "0")}`,
+      project: "campus",
+      project_name: "Marvin Campus",
+      title: `Предложение ${index + offset + 1}`,
+      description: "Проверка клавиатурной навигации.",
+      status: "new",
+      votes: 0,
+      voted: false,
+      created_at: "2026-10-21T00:00:00Z",
+    }));
+    return route.fulfill({ json: { items, total: 31 } });
+  });
+  await page.reload();
+  await expect(page.getByText("Найдено: 31")).toBeVisible();
+  await page.getByRole("button", { name: "Дальше", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/offset=30/);
+  const paginationHeading = page.getByRole("heading", {
+    name: "Предложения",
+    exact: true,
+  });
+  await expect(paginationHeading).toBeFocused();
+  expect(
+    await paginationHeading.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return (
+        style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2
+      );
+    }),
+  ).toBe(true);
+  await page.unroute("**/api/features?**");
+  await page.goto("/");
+  await expect(page.getByText(/^Найдено:/)).toBeVisible();
   await noHorizontalOverflow(page);
   await accessible(page);
   await page
