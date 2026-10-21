@@ -112,6 +112,14 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
   await page
     .getByRole("textbox", { name: "Заметка администратора" })
     .fill(`${marker}-PRIVATE-NOTE`);
+  await page.setViewportSize({ width: 320, height: 568 });
+  const editor = page.getByRole("dialog");
+  await page.getByRole("button", { name: "Сохранить", exact: true }).focus();
+  expect(await editor.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  page.once("dialog", dialog => dialog.dismiss());
+  await page.keyboard.press("Escape");
+  await expect(editor).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Заметка администратора" })).toHaveValue(`${marker}-PRIVATE-NOTE`);
   await noHorizontalOverflow(page);
   await accessible(page);
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();

@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { accessible, choose, noHorizontalOverflow } from "./helpers";
 
+test.use({ hasTouch: true });
+
 test("public screens: mobile and desktop, keyboard, theme, filters and axe", async ({
   page,
 }) => {
@@ -49,6 +51,7 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
     page.getByText(/Добавим безопасные сведения о браузере/),
   ).toBeVisible();
   await page.setViewportSize({ width: 320, height: 740 });
+  expect(await page.getByRole("textbox", { name: "Что случилось?" }).evaluate(el => getComputedStyle(el).fontSize)).toBe("16px");
   await noHorizontalOverflow(page);
   await accessible(page);
   await page.getByText("Добавить подробности", { exact: false }).click();
