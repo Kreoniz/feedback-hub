@@ -129,3 +129,72 @@ test("public screens: mobile and desktop, keyboard, theme, filters and axe", asy
   await accessible(page);
   expect(errors).toEqual([]);
 });
+
+test("skeletons replace initial and list loading; project icons stay in menu and trigger", async ({
+  page,
+}) => {
+  let releaseProjects!: () => void;
+  let releaseFeatures!: () => void;
+  const projectsGate = new Promise<void>((resolve) => {
+    releaseProjects = resolve;
+  });
+  const featuresGate = new Promise<void>((resolve) => {
+    releaseFeatures = resolve;
+  });
+  await page.route("**/api/projects", async (route) => {
+    await projectsGate;
+    await route.continue();
+  });
+  await page.route("**/api/features?**", async (route) => {
+    await featuresGate;
+    await route.continue();
+  });
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("region", { name: "Загрузка предложений" }),
+    ).toBeVisible();
+    await expect(page.locator(".skeleton-card")).toHaveCount(3);
+    await expect(page.locator(".u-spinner")).toHaveCount(0);
+    await noHorizontalOverflow(page);
+    await accessible(page);
+    releaseProjects();
+    await expect(
+      page.getByRole("heading", { name: "Предложения", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".loading-cards")).toBeVisible();
+    await expect(page.locator(".skeleton-card")).toHaveCount(3);
+    releaseFeatures();
+    await expect(page.getByText(/^Найдено:/)).toBeVisible();
+    await expect(page.locator(".skeleton-card")).toHaveCount(0);
+  } finally {
+    releaseProjects();
+    releaseFeatures();
+  }
+  await page.getByRole("combobox", { name: "Проект", exact: true }).click();
+  for (const [name, asset] of [
+    ["Marvin Campus", "campus.png"],
+    ["Unlikely UI", "unlikely-ui.svg"],
+    ["Другое", "other.svg"],
+  ]) {
+    const icon = page.getByRole("option", { name, exact: true }).locator("img");
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute("src", `/projects/${asset}`);
+    expect(
+      await icon.evaluate(
+        (el: HTMLImageElement) => el.complete && el.naturalWidth > 0,
+      ),
+    ).toBe(true);
+  }
+  await accessible(page);
+  await page
+    .getByRole("option", { name: "Marvin Campus", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Проект", exact: true }).locator("img"),
+  ).toHaveAttribute("src", "/projects/campus.png");
+  await page.setViewportSize({ width: 320, height: 740 });
+  await noHorizontalOverflow(page);
+  await page.getByRole("combobox", { name: "Проект", exact: true }).click();
+  await accessible(page);
+});

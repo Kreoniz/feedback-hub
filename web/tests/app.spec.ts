@@ -141,6 +141,17 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
   });
   await page.getByRole("button", { name: "Закрыть сообщение" }).click();
 
+  // Publish the second existing fixture to verify independent cards, without extra intake.
+  await page
+    .getByRole("button", { name: `Открыть: ${originalTitle}`, exact: true })
+    .click();
+  await choose(page, "Модерация", "Одобрено");
+  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await expect(
+    page.getByText("Изменения сохранены.", { exact: true }).last(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Закрыть сообщение" }).click();
+
   const visitor = await browser.newContext({
     baseURL,
     viewport: { width: 390, height: 844 },
@@ -159,13 +170,61 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     ).text();
     expect(publicJSON).not.toContain("PRIVATE");
     expect(publicJSON).not.toContain(bugText);
-    await publicPage.getByRole("button", { name: /^Поддержать:/ }).click();
+    const targetCard = publicPage
+      .locator(".feature-card")
+      .filter({
+        has: publicPage.getByRole("button", { name: title, exact: true }),
+      });
+    const otherCard = publicPage
+      .locator(".feature-card")
+      .filter({
+        has: publicPage.getByRole("button", {
+          name: originalTitle,
+          exact: true,
+        }),
+      });
+    const sibling = otherCard.locator(".vote-button");
+    const siblingNode = await sibling.elementHandle();
+    const siblingHTML = await sibling.evaluate((el) => el.outerHTML);
+    // Delay the outgoing real request, never fabricate a successful mutation response.
+    let releaseVote!: () => void;
+    const voteGate = new Promise<void>((resolve) => {
+      releaseVote = resolve;
+    });
+    await publicPage.route(
+      `**/api/features/${featureId}/vote`,
+      async (route) => {
+        await voteGate;
+        await route.continue();
+      },
+    );
+    try {
+      await targetCard.getByRole("button", { name: /^Поддержать:/ }).click();
+      await expect(targetCard.locator(".vote-button")).toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+      await expect(targetCard.locator(".vote-button")).toBeFocused();
+      await expect(sibling).toBeEnabled();
+      expect(await sibling.evaluate((el) => el.outerHTML)).toBe(siblingHTML);
+      expect(
+        await sibling.evaluate((el, previous) => el === previous, siblingNode),
+      ).toBe(true);
+      await sibling.click();
+      await expect(sibling).toHaveAttribute("aria-pressed", "true");
+    } finally {
+      releaseVote();
+    }
     await expect(
-      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+      targetCard.getByRole("button", { name: /^Отменить голос:/ }),
+    ).toBeEnabled();
+    await publicPage.unroute(`**/api/features/${featureId}/vote`);
+    await expect(
+      targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toBeEnabled();
     await publicPage.reload();
     await expect(
-      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+      targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toBeVisible();
     // A failed undo must retain the selected state, then a real DELETE removes only this vote.
     await publicPage.route("**/api/features/*/vote", (route) =>
@@ -173,25 +232,25 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
         ? route.abort("failed")
         : route.continue(),
     );
-    await publicPage.getByRole("button", { name: /^Отменить голос:/ }).click();
+    await targetCard.getByRole("button", { name: /^Отменить голос:/ }).click();
     await expect(
       publicPage.getByText("Не удалось изменить голос", { exact: true }),
     ).toBeVisible();
     await expect(
-      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+      targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toHaveAttribute("aria-pressed", "true");
     await publicPage.unroute("**/api/features/*/vote");
-    await publicPage.getByRole("button", { name: /^Отменить голос:/ }).click();
+    await targetCard.getByRole("button", { name: /^Отменить голос:/ }).click();
     await expect(
-      publicPage.getByRole("button", { name: /^Поддержать:/ }),
+      targetCard.getByRole("button", { name: /^Поддержать:/ }),
     ).toHaveAttribute("aria-pressed", "false");
     await publicPage.reload();
     await expect(
-      publicPage.getByRole("button", { name: /^Поддержать:/ }),
+      targetCard.getByRole("button", { name: /^Поддержать:/ }),
     ).toBeVisible();
-    await publicPage.getByRole("button", { name: /^Поддержать:/ }).click();
+    await targetCard.getByRole("button", { name: /^Поддержать:/ }).click();
     await expect(
-      publicPage.getByRole("button", { name: /^Отменить голос:/ }),
+      targetCard.getByRole("button", { name: /^Отменить голос:/ }),
     ).toHaveAttribute("aria-pressed", "true");
     const card = publicPage.locator(".feature-card").first();
     expect((await card.boundingBox())!.y).toBeLessThan(350);
@@ -226,7 +285,10 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     await page.getByRole("button", { name: "Закрыть сообщение" }).click();
     await publicPage.reload();
     await expect(
-      publicPage.getByRole("heading", { name: "Ничего не нашлось" }),
+      publicPage.getByRole("button", { name: title, exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      publicPage.getByRole("button", { name: originalTitle, exact: true }),
     ).toBeVisible();
   } finally {
     await visitor.close();
