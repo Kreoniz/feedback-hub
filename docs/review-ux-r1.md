@@ -30,11 +30,11 @@ Open a report, enter a note, press Escape, then reopen it. The UI first says “
 
 Consider asking before discarding a dirty editor, or retaining that draft in memory until explicit cancellation. Keep private notes out of persistent browser storage. This is a data-entry usability risk, not evidence of lost saved server data.
 
-### R3 · P2 · Pagination drops keyboard focus onto the document
+### R3 · P3 · Pagination has no explicit keyboard focus destination
 
 Locations: [`web/src/Board.tsx:188`](../web/src/Board.tsx#L188), [`web/src/Board.tsx:217`](../web/src/Board.tsx#L217), [`web/src/hooks.ts:14`](../web/src/hooks.ts#L14).
 
-With more than 30 results, activate “Дальше” using the keyboard. Loading replaces the results and paginator, destroying the focused button. After the next page appears, `document.activeElement` is `BODY`; focus does not return to the pager or move to the new results. This makes repeated keyboard browsing unnecessarily difficult. Reproduced with a **31-result synthetic browser fixture**, since the live board had one approved idea. The URL correctly changes to `?offset=30`, and Back restores the previous page.
+With more than 30 results, activate “Дальше” using the keyboard. Loading replaces the results and paginator, destroying the focused button. After the next page appears, `document.activeElement` is `BODY`, with no visible focus indicator. In the Firefox check, the next Tab reached the first new result's vote button; keyboard navigation was not trapped. An explicit focus destination would make the page transition and repeated paging clearer. Reproduced with a **31-result synthetic browser fixture**, since the live board had one approved idea. The URL correctly changes to `?offset=30`, and Back restores the previous page.
 
 Keep the pager mounted while loading, or deliberately focus a results heading after a page change. The admin list uses the same loading/pagination pattern and deserves the same check.
 
@@ -65,7 +65,7 @@ The entry point eagerly imports Board, NewReport and Admin (`web/src/main.tsx:8`
 
 ## Evidence and limits
 
-The initial live assets were `index-CkelsP7M.js` / `index-DLEhj9jC.css`. To avoid reporting fixes already made by the frontend owner, current source was independently compiled into ignored `.local/review-ux-r1/dist`: `index-zE0rUvst.js` / `index-CZvNJVV-.css`. Source hashes, scripts, screenshots and JSON measurements remain in `.local/review-ux-r1/`; they contain synthetic data and are intentionally uncommitted. Source line references above describe this review snapshot and may move as concurrent work lands.
+The initial live assets were `index-CkelsP7M.js` / `index-DLEhj9jC.css`. To avoid reporting fixes already made by the frontend owner, current source was independently compiled into ignored `.local/review-ux-r1/dist`: `index-zE0rUvst.js` / `index-CZvNJVV-.css`. Source hashes, scripts, screenshots and JSON measurements remain in `.local/review-ux-r1/`; they contain synthetic data and are intentionally uncommitted. Source hashes were unchanged at the final check; the latest frontend commit then was `eebf2ec`. Source line references above describe this review snapshot and may move as concurrent work lands.
 
 Used the repository's documented Playwright/Firefox workflow in a separate headless browser context. The task brief records two prior T3 preview snapshot failures: `Preview automation snapshot timed out after15000ms`. This review's first sandboxed browser attempt could not open local sockets; the successful checks used approved local browser execution. No server restart, shared-data mutation, SSH, production action or PR polling occurred.
 
