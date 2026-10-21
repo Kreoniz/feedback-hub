@@ -99,6 +99,11 @@ export const api = {
       `/features/${encodeURIComponent(id)}/vote`,
       { method: "POST", body: "{}" },
     ),
+  unvote: (id: string) =>
+    request<{ votes: number; voted: false }>(
+      `/features/${encodeURIComponent(id)}/vote`,
+      { method: "DELETE" },
+    ),
   session: (signal?: AbortSignal) =>
     request<{ authenticated: boolean; csrf_token?: string }>("/admin/session", {
       signal,

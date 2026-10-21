@@ -7,6 +7,7 @@ import "unlikely-ui/styles.css";
 import "./styles.css";
 import { Admin } from "./Admin";
 import { Board } from "./Board";
+import { Help } from "./Help";
 import { NewReport } from "./NewReport";
 import { api } from "./api";
 import { useResource } from "./hooks";
@@ -36,41 +37,35 @@ function App() {
       </a>
       <header className="site-header">
         <div className="header-inner">
-          <a className="brand" href="/" aria-label="Kreoniz — обратная связь">
-            <span className="brand-mark" aria-hidden="true">
-              k<span>↗</span>
-            </span>
-            <span>
-              kreoniz<span className="brand-caption">обратная связь</span>
-            </span>
+          <a className="brand" href="/" aria-label="Feedback Hub — предложения">
+            <img
+              className="brand-mark"
+              src="/feedback-bulb.png"
+              width="40"
+              height="40"
+              alt=""
+            />
+            <span>Feedback Hub</span>
           </a>
           <nav className="header-nav" aria-label="Основная навигация">
-            <a href="/" aria-current={path === "/" ? "page" : undefined}>
-              Идеи
-            </a>
-            <a
-              href="/new?type=bug"
-              aria-current={path === "/new" ? "page" : undefined}
+            <Help />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={
+                appearance === "light"
+                  ? "Включить тёмную тему"
+                  : "Включить светлую тему"
+              }
+              onClick={() =>
+                setAppearance((current) =>
+                  current === "light" ? "dark" : "light",
+                )
+              }
             >
-              Сообщить об ошибке
-            </a>
+              <Icon name={appearance === "light" ? "moon" : "sun"} />
+            </Button>
           </nav>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={
-              appearance === "light"
-                ? "Включить тёмную тему"
-                : "Включить светлую тему"
-            }
-            onClick={() =>
-              setAppearance((current) =>
-                current === "light" ? "dark" : "light",
-              )
-            }
-          >
-            <Icon name={appearance === "light" ? "moon" : "sun"} />
-          </Button>
         </div>
       </header>
       <main
@@ -103,12 +98,6 @@ function App() {
           )}
         </Boundary>
       </main>
-      <footer className="site-footer">
-        <div>
-          <span>Сделано, чтобы становиться лучше.</span>
-          <a href="/admin">{admin ? "Управление" : "Для администратора"}</a>
-        </div>
-      </footer>
     </Theme>
   );
 }

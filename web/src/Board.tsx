@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "unlikely-ui/badge";
 import { Button } from "unlikely-ui/button";
 import { Card } from "unlikely-ui/card";
 import { Dialog } from "unlikely-ui/dialog";
 import { Input } from "unlikely-ui/input";
+import { PhysicalButton } from "unlikely-ui/physical-button";
+import { ProjectLink } from "./ProjectLink";
 import { api, ApiError, errorMessage } from "./api";
 import { dateLabel, listQuery, options, statusLabels } from "./domain";
 import type { Feature, Project } from "./domain";
-import { useFilters, usePaginationFocus, useResource, useSearch } from "./hooks";
+import {
+  useFilters,
+  usePaginationFocus,
+  useResource,
+  useSearch,
+} from "./hooks";
 import {
   EmptyState,
   ErrorNotice,
@@ -48,7 +54,7 @@ export function Board({ projects }: { projects: Project[] }) {
     return () => controller.abort();
   }, []);
   async function vote(feature: Feature) {
-    if (voting || feature.voted) return;
+    if (voting) return;
     setVoting(feature.id);
     setVoteError("");
     try {
@@ -56,7 +62,9 @@ export function Board({ projects }: { projects: Project[] }) {
         await api.form();
         setVisitorReady(true);
       }
-      const result = await api.vote(feature.id);
+      const result = await (feature.voted
+        ? api.unvote(feature.id)
+        : api.vote(feature.id));
       resource.updateData((data) =>
         data
           ? {
@@ -67,7 +75,11 @@ export function Board({ projects }: { projects: Project[] }) {
             }
           : data,
       );
-      setAnnouncement(`Вы поддержали идею «${feature.title}».`);
+      setAnnouncement(
+        result.voted
+          ? `Вы поддержали предложение «${feature.title}».`
+          : `Голос за предложение «${feature.title}» отменён.`,
+      );
     } catch (error) {
       setVoteError(errorMessage(error));
     } finally {
@@ -79,203 +91,154 @@ export function Board({ projects }: { projects: Project[] }) {
   const resultsHeading = usePaginationFocus<HTMLHeadingElement>(offset);
   return (
     <>
-      <section className="hero">
-        <div>
-          <p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p>
-          <h1>
-            Что улучшить дальше<span className="accent-text">?</span>
+      <section className="board-main" aria-label="Предложения">
+        <div className="board-heading">
+          <h1 ref={resultsHeading} tabIndex={-1}>
+            Предложения
           </h1>
-          <p className="lead">
-            Хорошие идеи приходят от тех, кто пользуется проектом.
-            <br className="desktop-break" /> Предлагайте улучшения и
-            поддерживайте нужные вам.
-          </p>
+          <Button
+            render={
+              <a
+                href={`/new${filters.project ? `?project=${encodeURIComponent(filters.project)}` : ""}`}
+              />
+            }
+            nativeButton={false}
+          >
+            <Icon name="plus" />
+            Написать
+          </Button>
         </div>
-        <Button
-          size="lg"
-          render={
-            <a
-              href={`/new${filters.project ? `?project=${encodeURIComponent(filters.project)}` : ""}`}
-            />
-          }
-          nativeButton={false}
-        >
-          <Icon name="plus" />
-          Предложить идею
-        </Button>
-      </section>
-      <div className="board-layout">
-        <section className="board-main" aria-label="Доска идей">
-          <div className="section-heading">
-            <h2 ref={resultsHeading} tabIndex={-1}>Доска идей</h2>
-            <Badge tone="neutral">Публично</Badge>
-          </div>
-          <div className="filter-panel">
-            <div className="search-field">
-              <FormField label="Поиск идей" name="q">
-                <div className="search-input">
-                  <Icon name="search" />
-                  <Input
-                    type="search"
-                    value={search}
-                    onValueChange={setSearch}
-                    placeholder="Что хочется улучшить?"
-                    maxLength={200}
-                  />
-                </div>
-              </FormField>
-            </div>
-            <SelectField
-              label="Проект"
-              name="project"
-              value={filters.project}
-              onChange={(project) => update({ project })}
-              items={[
-                { value: "", label: "Все проекты" },
-                ...projects.map((p) => ({ value: p.slug, label: p.name })),
-              ]}
-            />
-            <SelectField
-              label="Статус"
-              name="status"
-              value={filters.status}
-              onChange={(status) => update({ status })}
-              items={[
-                { value: "", label: "Все статусы" },
-                ...options(statusLabels),
-              ]}
-            />
-            <SelectField
-              label="Порядок"
-              name="sort"
-              value={filters.sort}
-              onChange={(sort) => update({ sort })}
-              items={[
-                { value: "votes", label: "Популярные" },
-                { value: "new", label: "Сначала новые" },
-              ]}
-            />
-          </div>
-          <div className="list-heading">
-            <p className="muted" aria-live="polite">
-              {resource.loading
-                ? "Ищем идеи…"
-                : resource.data
-                  ? `Найдено: ${resource.data.total}`
-                  : "Не удалось обновить список"}
-            </p>
-            {filtered && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  update({ project: "", q: "", status: "", offset: "" })
-                }
-              >
-                Сбросить
-                <Icon name="close" />
-              </Button>
-            )}
-          </div>
-          {voteError && (
-            <ErrorNotice
-              error={new ApiError(voteError)}
-              title="Не удалось добавить голос"
-            />
-          )}
-          <div className="sr-only" role="status">
-            {announcement}
-          </div>
-          {resource.loading ? (
-            <Loading cards label="Загружаем идеи" />
-          ) : resource.error ? (
-            <ErrorNotice error={resource.error} retry={resource.reload} />
-          ) : (
-            resource.data && (
-              <>
-                {!resource.data.items.length ? (
-                  <EmptyState
-                    filtered={filtered || !!offset}
-                    reset={() =>
-                      update({ project: "", q: "", status: "", offset: "" })
-                    }
-                  />
-                ) : (
-                  <ul className="feature-list">
-                    {resource.data.items.map((feature) => (
-                      <li key={feature.id}>
-                        <FeatureCard
-                          feature={feature}
-                          vote={() => vote(feature)}
-                          voting={voting === feature.id}
-                          otherVoting={!!voting}
-                          error={voteError}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Pagination
-                  offset={offset}
-                  total={resource.data.total}
-                  onChange={(offset) => update({ offset })}
+        <div className="filter-panel board-filters">
+          <div className="search-field">
+            <FormField label="Поиск предложений" name="q">
+              <div className="search-input">
+                <Icon name="search" />
+                <Input
+                  type="search"
+                  value={search}
+                  onValueChange={setSearch}
+                  placeholder="Поиск"
+                  maxLength={200}
                 />
-              </>
-            )
-          )}
-        </section>
-        <aside className="board-aside">
-          <Card.Root className="how-card">
-            <p className="eyebrow">МАЛЕНЬКИЙ ВКЛАД</p>
-            <h2>
-              Ваш голос
-              <br /> помогает выбрать.
-            </h2>
-            <p>
-              Поддержите идею, если она пригодится и вам. Мы учитываем голоса,
-              когда планируем улучшения.
-            </p>
-            <div className="aside-rule" />
-            <p className="small">
-              Идеи появляются после проверки. Голоса не равны числу уникальных
-              людей. Общая сеть может временно задержать голос.
-            </p>
-            <details className="vote-privacy">
-              <summary>Как устроено голосование</summary>
-              <p>
-                Cookie посетителя действует 365 дней: один голос за идею с
-                выданного идентификатора. В общей сети новый голос за ту же идею
-                может быть доступен через 60 секунд. Сброс cookie или другой
-                браузер после паузы позволяют проголосовать снова. Регистрация
-                не нужна.
-              </p>
-            </details>
-          </Card.Root>
-          <div className="bug-note">
-            <Icon name="message" />
-            <h2>Что-то не работает?</h2>
-            <p>Расскажите об ошибке. Сообщение увидит только администратор.</p>
-            <a
-              href={`/new?type=bug${filters.project ? `&project=${encodeURIComponent(filters.project)}` : ""}`}
-            >
-              Сообщить об ошибке
-              <Icon name="arrow" />
-            </a>
+              </div>
+            </FormField>
           </div>
-        </aside>
-      </div>
+          <SelectField
+            label="Проект"
+            name="project"
+            value={filters.project}
+            onChange={(project) => update({ project })}
+            items={[
+              { value: "", label: "Все проекты" },
+              ...projects.map((p) => ({ value: p.slug, label: p.name })),
+            ]}
+          />
+          <SelectField
+            label="Статус"
+            name="status"
+            value={filters.status}
+            onChange={(status) => update({ status })}
+            items={[
+              { value: "", label: "Все статусы" },
+              ...options(statusLabels),
+            ]}
+          />
+          <SelectField
+            label="Порядок"
+            name="sort"
+            value={filters.sort}
+            onChange={(sort) => update({ sort })}
+            items={[
+              { value: "votes", label: "Популярные" },
+              { value: "new", label: "Сначала новые" },
+            ]}
+          />
+        </div>
+        <div className="list-heading">
+          <p className="muted" aria-live="polite">
+            {resource.loading
+              ? "Загружаем…"
+              : resource.data
+                ? `Найдено: ${resource.data.total}`
+                : "Не удалось обновить список"}
+          </p>
+          {filtered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                update({ project: "", q: "", status: "", offset: "" })
+              }
+            >
+              Сбросить
+              <Icon name="close" />
+            </Button>
+          )}
+        </div>
+        {voteError && (
+          <ErrorNotice
+            error={new ApiError(voteError)}
+            title="Не удалось изменить голос"
+          />
+        )}
+        <div className="sr-only" role="status">
+          {announcement}
+        </div>
+        {resource.loading ? (
+          <Loading cards label="Загружаем предложения" />
+        ) : resource.error ? (
+          <ErrorNotice error={resource.error} retry={resource.reload} />
+        ) : (
+          resource.data && (
+            <>
+              {!resource.data.items.length ? (
+                <EmptyState
+                  filtered={filtered || !!offset}
+                  reset={() =>
+                    update({ project: "", q: "", status: "", offset: "" })
+                  }
+                />
+              ) : (
+                <ul className="feature-list">
+                  {resource.data.items.map((feature) => (
+                    <li key={feature.id}>
+                      <FeatureCard
+                        feature={feature}
+                        project={projects.find(
+                          (p) => p.slug === feature.project,
+                        )}
+                        vote={() => vote(feature)}
+                        voting={voting === feature.id}
+                        otherVoting={!!voting}
+                        error={voteError}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Pagination
+                offset={offset}
+                total={resource.data.total}
+                onChange={(offset) => update({ offset })}
+              />
+            </>
+          )
+        )}
+      </section>
     </>
   );
 }
 
 function FeatureCard({
   feature,
+  project,
   vote,
   voting,
   otherVoting,
   error,
 }: {
   feature: Feature;
+  project?: Project;
   vote: () => void;
   voting: boolean;
   otherVoting: boolean;
@@ -283,21 +246,35 @@ function FeatureCard({
 }) {
   return (
     <Card.Root className="feature-card">
-      <Button
+      <PhysicalButton
         className="vote-button"
-        variant={feature.voted ? "primary" : "secondary"}
-        aria-label={`${feature.voted ? "Вы поддержали" : "Поддержать"}: ${feature.title}. Голосов: ${feature.votes}`}
+        size="sm"
+        pattern="plain"
+        depth="low"
+        colors={{
+          cap: feature.voted ? "var(--u-accent)" : "var(--u-surface-raised)",
+          capText: feature.voted ? "var(--u-accent-ink)" : "var(--u-ink)",
+          casing: "var(--u-line)",
+          plate: "var(--u-well)",
+        }}
+        aria-label={`${feature.voted ? "Отменить голос" : "Поддержать"}: ${feature.title}. Голосов: ${feature.votes}`}
         aria-pressed={feature.voted}
-        disabled={feature.voted || otherVoting}
-        loading={voting}
+        aria-busy={voting}
+        disabled={otherVoting}
         onClick={vote}
       >
-        <Icon name={feature.voted ? "check" : "up"} />
-        <span>{feature.votes}</span>
-      </Button>
+        <span className="vote-cap">
+          <Icon name={feature.voted ? "check" : "up"} />
+          <span>{feature.votes}</span>
+        </span>
+      </PhysicalButton>
       <div className="feature-body">
         <div className="card-meta">
-          <span>{feature.project_name}</span>
+          <ProjectLink
+            project={project}
+            slug={feature.project}
+            name={feature.project_name}
+          />
           <span aria-hidden="true">·</span>
           <time dateTime={feature.created_at}>
             {dateLabel(feature.created_at)}
@@ -317,7 +294,11 @@ function FeatureCard({
           </div>
           <Dialog.Content className="idea-dialog">
             <div className="dialog-heading">
-              <Badge>{feature.project_name}</Badge>
+              <ProjectLink
+                project={project}
+                slug={feature.project}
+                name={feature.project_name}
+              />
               <Dialog.Close
                 render={
                   <Button
@@ -339,19 +320,19 @@ function FeatureCard({
             {error && (
               <ErrorNotice
                 error={new ApiError(error)}
-                title="Не удалось добавить голос"
+                title="Не удалось изменить голос"
               />
             )}
             <div className="dialog-actions">
               <StatusBadge status={feature.status} />
               <Button
                 onClick={vote}
-                disabled={feature.voted || otherVoting}
+                disabled={otherVoting}
                 loading={voting}
                 variant={feature.voted ? "secondary" : "primary"}
               >
                 <Icon name={feature.voted ? "check" : "up"} />
-                {feature.voted ? "Вы поддержали" : "Поддержать"} ·{" "}
+                {feature.voted ? "Отменить голос" : "Поддержать"} ·{" "}
                 {feature.votes}
               </Button>
             </div>

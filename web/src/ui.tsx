@@ -139,7 +139,7 @@ export function SelectField({
         <Select.Trigger>
           <Select.Value />
         </Select.Trigger>
-        <Select.Content>
+        <Select.Content className="hub-select-popup">
           {items.map((item) => (
             <Select.Item key={item.value || "all"} value={item.value}>
               {item.label}
@@ -219,26 +219,19 @@ export function EmptyState({
           ? "Ничего не нашлось"
           : admin
             ? "Пока всё спокойно"
-            : "Здесь начинается следующая идея"}
+            : "Пока нет предложений"}
       </Card.Title>
       <Card.Description>
         {filtered
           ? "Попробуйте другой запрос или уберите часть фильтров."
           : admin
             ? "Новые сообщения появятся здесь."
-            : "Пока нет опубликованных предложений. Расскажите, чего вам не хватает."}
+            : "Новые предложения появятся после проверки."}
       </Card.Description>
-      {filtered ? (
+      {filtered && (
         <Button variant="secondary" onClick={reset}>
           Сбросить фильтры
         </Button>
-      ) : (
-        !admin && (
-          <Button render={<a href="/new" />} nativeButton={false}>
-            <Icon name="plus" />
-            Предложить идею
-          </Button>
-        )
       )}
     </Card.Root>
   );

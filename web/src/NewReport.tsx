@@ -178,20 +178,11 @@ export function NewReport({ projects }: { projects: Project[] }) {
   return (
     <div className="form-page">
       <a className="back-link" href="/">
-        <Icon name="back" />К доске идей
+        <Icon name="back" />
+        Предложения
       </a>
       <header className="form-heading">
-        <p className="eyebrow">ПАРА СЛОВ — УЖЕ ПОМОЩЬ</p>
-        <h1>
-          {draft.type === "bug"
-            ? "Расскажите об ошибке."
-            : "Есть идея? Давайте обсудим."}
-        </h1>
-        <p className="lead">
-          {draft.type === "bug"
-            ? "Что пошло не так? Достаточно короткого описания."
-            : "Что сделает проект полезнее для вас?"}
-        </p>
+        <h1>Обратная связь</h1>
       </header>
       <Card.Root className="report-card">
         <form onSubmit={submit} noValidate ref={form} className="form-stack">
@@ -205,8 +196,8 @@ export function NewReport({ projects }: { projects: Project[] }) {
                 change("type", value as ReportDraft["type"])
               }
             >
-              <RadioGroup.Item value="feature">Предложить идею</RadioGroup.Item>
-              <RadioGroup.Item value="bug">Сообщить об ошибке</RadioGroup.Item>
+              <RadioGroup.Item value="feature">Предложение</RadioGroup.Item>
+              <RadioGroup.Item value="bug">Ошибка</RadioGroup.Item>
             </RadioGroup.Root>
           </fieldset>
           <SelectField
