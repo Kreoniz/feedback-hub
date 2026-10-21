@@ -29,7 +29,7 @@ if not env.exists():
     production = sys.argv[1] == 'production'
     origin = 'https://feedback.kreoniz.ru' if production else 'http://localhost:18080'
     trusted = 'REPLACE_WITH_VERIFIED_CADDY_IP/32' if production else '172.30.42.2/32'
-    env.write_text(f'APP_ORIGIN={origin}\nDEVELOPMENT={str(not production).lower()}\nFEEDBACK_PORT=18080\nSECRET_DIRECTORY={directory}\nTRUSTED_PROXIES={trusted}\nEDGE_NETWORK=beszel-edge\nFEEDBACK_IMAGE=feedback-hub:local\n')
+    env.write_text(f'APP_ORIGIN={origin}\nDEVELOPMENT={str(not production).lower()}\nFEEDBACK_PORT=18080\nSECRET_DIRECTORY={directory}\nTRUSTED_PROXIES={trusted}\nEDGE_NETWORK=REPLACE_WITH_SHARED_CADDY_NETWORK\nFEEDBACK_IMAGE=feedback-hub:local\n')
     env.chmod(0o600)
 PY
 if [[ ! -s .local/secrets/admin_hash ]]; then

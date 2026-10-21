@@ -56,6 +56,6 @@ networks:
   data: { internal: true }
   edge:
     external: true
-    name: ${EDGE_NETWORK:-beszel-edge}
+    name: ${EDGE_NETWORK:?Set actual shared Caddy network}
 volumes:
   database:

@@ -1,6 +1,8 @@
 .git
 .env*
+**/.env*
 .local
+**/.local
 **/node_modules
 web/dist
 web/test-results

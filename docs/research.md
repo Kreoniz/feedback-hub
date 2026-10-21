@@ -2,7 +2,7 @@
 
 Research date: **2026-10-21**. Contract reviewed: `docs/contract.md` at initial commit `22298df` (2026-10-21). Primary sources only; links below were checked on the research date. An undated vendor page is a current published claim, not a dated measurement or a guarantee. **Recommendation** and **inference** identify this reviewer's judgments. No SSH, DNS, deployment, account changes, vendor contact, or attack testing was performed.
 
-The infrastructure skill and its saved map were read for context: `vdsina-ru` hosts several services behind shared Caddy and has a small resource budget. That is dated local context, not live verification of the host, provider account, installed Caddy build, firewall, or purchased protection. No operational reference needs updating because nothing was changed.
+The infrastructure skill and its saved map were read for context: the target VPS hosts several services behind shared Caddy and has a small resource budget. That is dated local context, not live verification of the host, provider account, installed Caddy build, firewall, or purchased protection. No operational reference needs updating because nothing was changed.
 
 ## Recommendation
 

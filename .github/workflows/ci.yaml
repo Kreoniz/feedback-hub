@@ -46,4 +46,15 @@ jobs:
       - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.production:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - run: CADDY_TEST_IMAGE=feedback-hub-caddy:ci ./scripts/test-caddy-logs.sh
+      - name: Shared ingress error-log privacy
+        run: |
+          mkdir -p .local
+          python3 - <<'PY'
+          from pathlib import Path
+          config = Path('deploy/Caddyfile.shared-options.example').read_text()
+          config = config.replace('{\n', '{\n\tadmin off\n\tpersist_config off\n', 1)
+          config += '\nhttp://:8080 {\n reverse_proxy unavailable.invalid:8080\n}\n'
+          Path('.local/caddy-shared-probe').write_text(config)
+          PY
+          CADDY_TEST_CONFIG="$PWD/.local/caddy-shared-probe" CADDY_TEST_IMAGE=feedback-hub-caddy:ci ./scripts/test-caddy-logs.sh
       - run: docker compose --env-file .env.example -f deploy/compose.production.yaml config --quiet

@@ -2,11 +2,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 name="feedback-hub-log-test-$$"
+config=${CADDY_TEST_CONFIG:-$PWD/deploy/Caddyfile.local}
 trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 docker run -d --name "$name" --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --tmpfs /data:rw,noexec,nosuid,size=8m,uid=10001,gid=10001 \
-  -v "$PWD/deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro,z" \
+  -v "$config:/etc/caddy/Caddyfile:ro,z" \
   "${CADDY_TEST_IMAGE:-feedback-hub-caddy:local}" \
   caddy run --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 # Upstream cannot resolve on --network none. Exercise the real 502 error logger.

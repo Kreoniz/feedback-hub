@@ -4,7 +4,7 @@
 
 ## Подготовка
 
-Сохранённый инфраструктурный контекст указывает на `vdsina-ru`, общий контейнер Caddy `beszel-proxy-caddy-1`, сеть `beszel-edge`, bind-mounted `/etc/beszel-proxy/Caddyfile`. Это датированный контекст, его нужно сверить узко перед применением. На VPS примерно 2 ГБ RAM; собирать Node/Go образы лучше локально или в CI. Заложить 500–650 МБ RAM для нового стека и запас диска для БД/backup. Существующие сервисы не останавливать.
+Фактические SSH alias, контейнер Caddy, его Docker-сеть и путь bind-mounted Caddyfile храните в приватной инфраструктурной карте и сверяйте перед применением. Собирать Node/Go образы лучше локально или в CI. Заложить 500–650 МБ RAM для нового стека и запас диска для БД/backup. Существующие сервисы не останавливать.
 
 1. Получить явное разрешение на конкретный деплой/изменение DNS и общего Caddy.
 2. Проверить свободные ресурсы, фактическую Docker-сеть и IP Caddy **в ней**, существующие маршруты и backup общего Caddy. Не выводить env/logs других сервисов.
@@ -49,6 +49,8 @@ PostgreSQL volume смонтирован в `/var/lib/postgresql` по конт�
 Добавить **только** site block из `deploy/Caddyfile.production` в существующий конфиг. Не заменять общий Caddyfile. Если файл bind-mounted отдельно, сохранить inode при записи по действующему runbook. Проверить Caddy `validate` до `reload`, затем здоровье существующих маршрутов. Не добавлять stock Caddy `rate_limit`: такого встроенного модуля нет, лимиты реализованы в Go.
 
 Перед публикацией обязательно проверить эффективные inbound header/body/read/write/idle timeouts общего Caddy по примеру `deploy/Caddyfile.local`; согласовать совместимую настройку для соседних сайтов. Error logs должны удалять request URI/headers и **оба** поля адреса `remote_ip`/`client_ip`; access logs для нового сервиса не включать. Подтвердить это синтетической ошибкой upstream без приватных данных. CSP и прочие защитные заголовки выставляет Go. Health закрыт production Caddy.
+
+Проверенный для Caddy 2.11.4 пример общих настроек — `deploy/Caddyfile.shared-options.example`: входные заголовки ограничены 32KB/10s, request-поля удаляются из runtime error logs. Объединять с существующим global block, а не заменять его. Read/write deadlines 10s/30s задаются в `request_body` **только нового сайта**, чтобы не менять долгие подключения соседних сервисов. На установленной 2.11.4 этот синтаксис проверен через `caddy adapt`; новая экспериментальная директива `timeouts` из текущей онлайн-документации в этой версии не распознаётся. При обновлении Caddy повторно проверить совместимость; см. [request_body](https://caddyserver.com/docs/caddyfile/directives/request_body) и [global options](https://caddyserver.com/docs/caddyfile/options).
 
 DNS направить на утверждённую точку ingress после выбора сетевой защиты. При текущем прямом доступе Caddy сам получает HTTPS certificate. Не проксировать через Cloudflare по умолчанию: российские пользователи имеют подтверждённые риски доступности; [исследование](research.md) рассматривает альтернативы. При external reverse proxy закрыть обход origin на уровне ingress/firewall, предусмотреть ACME/DNS certificate validation, проверенные source ranges и отдельный корректный контракт client IP. Сначала согласовать это централизованно для домена.
 

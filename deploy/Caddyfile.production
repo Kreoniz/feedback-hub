@@ -4,6 +4,9 @@
 feedback.kreoniz.ru {
 	request_body {
 		max_size 64KB
+		# Verified with Caddy 2.11.4; scoped to this site, preserving other streams.
+		read_timeout 10s
+		write_timeout 30s
 	}
 	@internal path /health/*
 	respond @internal 404
