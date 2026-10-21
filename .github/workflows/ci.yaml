@@ -41,3 +41,7 @@ jobs:
       - run: ./scripts/test-e2e.sh
       - run: docker compose config --quiet
       - run: docker build --tag feedback-hub:ci .
+      - run: docker build --tag feedback-hub-caddy:ci --file deploy/Dockerfile.caddy .
+      - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.production:/etc/caddy/Caddyfile:ro" feedback-hub-caddy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - run: docker compose --env-file .env.example -f deploy/compose.production.yaml config --quiet
