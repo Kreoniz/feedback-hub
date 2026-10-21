@@ -92,11 +92,19 @@ func (s *Store) Submit(ctx context.Context, r Submission) (bool, error) {
 	if total >= MaxTotalReports || daily >= MaxDailyReports || projectDaily >= MaxProjectDailyReports {
 		return false, ErrBudget
 	}
-	tag, err := tx.Exec(ctx, `INSERT INTO reports(id,project,type,title,description,details,context,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(fingerprint) DO NOTHING`, r.ID, r.Project, r.Type, r.Title, r.Description, r.Details, b, r.Fingerprint)
+	// Suppress retries, not future regressions. The ledger lock above also
+	// serializes this check/insert, including across application restarts.
+	var duplicate bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM reports WHERE fingerprint=$1 AND created_at>now()-interval '24 hours' AND status NOT IN ('done','closed'))`, r.Fingerprint).Scan(&duplicate); err != nil {
+		return false, err
+	}
+	if duplicate {
+		return true, tx.Commit(ctx)
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO reports(id,project,type,title,description,details,context,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, r.ID, r.Project, r.Type, r.Title, r.Description, r.Details, b, r.Fingerprint)
 	if err != nil {
 		return false, err
 	}
-	duplicate := tag.RowsAffected() == 0
 	if !duplicate {
 		if _, err = tx.Exec(ctx, `UPDATE intake_totals SET reports=reports+1 WHERE id=true`); err != nil {
 			return false, err

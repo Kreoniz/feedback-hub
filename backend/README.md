@@ -86,6 +86,8 @@ Integration tests skip explicitly when DATABASE_URL_TEST is unset. Tests cover r
 
 ## Primary sources checked 2026-10-21
 
+Integration refinement: exact-content dedupe is limited to unresolved reports from the preceding **24 hours**. A recurrence after resolution (`done`/`closed`) is accepted immediately. The existing transaction ledger lock serializes check/insert; migration003 removes the permanent fingerprint uniqueness that would otherwise suppress future bug regressions forever. Public receipts remain neutral. PostgreSQL regression tests cover retries, next-day recurrence and recurrence after resolution.
+
 - [Go net/http](https://pkg.go.dev/net/http): server timeouts, bounded bodies and graceful shutdown. The local mise toolchain used for tests is Go 1.27.2; module baseline is 1.27.0. Deployment should use the lead's patched toolchain pin.
 - [pgxpool](https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool): pool/context behavior. Direct dependency pinned to v5.11.0; all transitive versions are in go.mod/go.sum.
 - [x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt): bcrypt comparison and 72-byte input limit. Pinned x/crypto v0.58.0, compatible with Go 1.27.

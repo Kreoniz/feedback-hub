@@ -27,6 +27,36 @@ func submit(t *testing.T, db *store.Store, id, typ, project string) {
 	}
 }
 func str(s string) *string { return &s }
+func TestDatabaseDedupeAllowsRecurrences(t *testing.T) {
+	db := testutil.Database(t)
+	ctx := context.Background()
+	hash := sha256.Sum256([]byte("recurring-private-bug"))
+	report := store.Submission{ID: id1, Project: "campus", Type: "bug", Description: "Снова не открывается", Fingerprint: hash[:]}
+	if duplicate, err := db.Submit(ctx, report); err != nil || duplicate {
+		t.Fatalf("first report: duplicate=%v err=%v", duplicate, err)
+	}
+	report.ID = id2
+	if duplicate, err := db.Submit(ctx, report); err != nil || !duplicate {
+		t.Fatalf("immediate retry: duplicate=%v err=%v", duplicate, err)
+	}
+	if _, err := db.Pool.Exec(ctx, `UPDATE reports SET created_at=now()-interval '25 hours' WHERE id=$1`, id1); err != nil {
+		t.Fatal(err)
+	}
+	if duplicate, err := db.Submit(ctx, report); err != nil || duplicate {
+		t.Fatalf("next-day recurrence: duplicate=%v err=%v", duplicate, err)
+	}
+	if _, err := db.Update(ctx, id2, store.Patch{Status: str("done")}); err != nil {
+		t.Fatal(err)
+	}
+	report.ID = id3
+	if duplicate, err := db.Submit(ctx, report); err != nil || duplicate {
+		t.Fatalf("regression after resolution: duplicate=%v err=%v", duplicate, err)
+	}
+	_, total, err := db.List(ctx, store.Filter{Limit: 30}, false, []byte{})
+	if err != nil || total != 3 {
+		t.Fatalf("recurrence history lost: count=%d err=%v", total, err)
+	}
+}
 func TestDatabaseAtomicDedupeAndVotes(t *testing.T) {
 	db := testutil.Database(t)
 	ctx := context.Background()
