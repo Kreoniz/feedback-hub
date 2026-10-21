@@ -22,6 +22,8 @@ Trust forwarded IP only from configured exact proxy networks; do not trust arbit
 
 Automatic content dedupe is scoped to one signed visitor, unresolved reports and 24 hours. Never reintroduce cross-visitor dedupe: its quota side effects disclose private content even with generic receipts. Different reporters remain independent; the owner links them manually. Maintain intake counters transactionally; SQL maintenance must reconcile counters under a write pause. Public search must never include private notes/details.
 
+Undo voting retains the visitor/report row with `active=false`; inactive rows still consume their lifetime storage slot. Re-voting the same identity reactivates that row immediately. Never refund its quota, create tombstones for nonexistent votes, or clear/extend network cooldowns on undo/re-vote. Public/admin counts and visitor state must include active votes only. POST and DELETE share mutation guards, rate limits and report-row locking.
+
 Keep global anchor/font resets from overriding Unlikely UI's CSS layers, action foregrounds or coarse-pointer 16px typography. Verify the modal's own scroll width at 320px; document overflow checks alone miss clipped dialog actions. Dirty admin edits require explicit discard confirmation and remain out of persistent browser storage.
 
 ## Commands

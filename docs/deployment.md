@@ -11,9 +11,9 @@
 3. Собрать и проверить образ локально, дать уникальный tag. Пример:
 
 ```sh
-docker build -t feedback-hub:2026-10-21-1 .
+docker build -t feedback-hub:2026-10-21-2 .
 # Архив большой: хранить на диске под home, не в RAM-backed /tmp.
-docker save feedback-hub:2026-10-21-1 | gzip > .local/feedback-hub-2026-10-21-1.tar.gz
+docker save feedback-hub:2026-10-21-2 | gzip > .local/feedback-hub-2026-10-21-2.tar.gz
 ```
 
 Перенести репозиторий без `.local`, `.env`, `.git` и образ на выбранный VPS по утверждённому каналу; загрузить `docker load`. Разместить приложение отдельно, например `/opt/feedback-hub`. Не копировать локальные тестовые данные и секреты в production.
@@ -23,13 +23,13 @@ docker save feedback-hub:2026-10-21-1 | gzip > .local/feedback-hub-2026-10-21-1.
 На целевом хосте после загрузки образа:
 
 ```sh
-FEEDBACK_IMAGE=feedback-hub:2026-10-21-1 ./scripts/init-env.sh production
+FEEDBACK_IMAGE=feedback-hub:2026-10-21-2 ./scripts/init-env.sh production
 ```
 
 Скрипт создаёт новые случайные credentials в `.local`, защищает каталоги `0700`. Пароль владельца — `.local/admin-password`; доставлять его владельцу приватно, не в чат/logs. Перед первым запуском отредактировать `.env`:
 
 - `SECRET_DIRECTORY`: абсолютный путь к production `.local/secrets`.
-- `FEEDBACK_IMAGE`: точный проверенный tag, например `feedback-hub:2026-10-21-1`.
+- `FEEDBACK_IMAGE`: точный проверенный tag, например `feedback-hub:2026-10-21-2`.
 - `EDGE_NETWORK`: существующая сеть общего Caddy.
 - `TRUSTED_PROXIES`: только фактический Caddy peer IP `/32` (или `/128`). Placeholder обязательно заменить. При пересоздании Caddy IP может измениться: закрепить его штатным способом либо обновить только этот параметр после проверки.
 

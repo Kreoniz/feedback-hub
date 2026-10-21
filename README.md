@@ -47,7 +47,7 @@ pnpm --dir web exec playwright install --with-deps firefox
 ./scripts/test-e2e.sh
 ```
 
-PostgreSQL-тесты создают/чистят собственные fixtures; URL должен указывать только на тестовую БД. `scripts/test-e2e.sh` запускает настоящий Go API, использует случайный тестовый admin-пароль и завершает процесс после тестов. Логи/артефакты остаются в ignored `.local` и `web/test-results`. CI запускает Go vet/race, TypeScript, unit, PostgreSQL, Playwright и Docker build. Результаты конкретной проверки — в [docs/validation.md](docs/validation.md).
+PostgreSQL-тесты создают/чистят собственные fixtures; URL должен указывать только на тестовую БД. `scripts/test-e2e.sh` запускает настоящий Go API, использует случайный тестовый admin-пароль и завершает процесс после тестов. Логи/артефакты остаются в ignored `.local` и `web/test-results`. CI запускает Go vet/race, TypeScript, unit, PostgreSQL, Playwright и Docker build. Результаты конкретной проверки — в [docs/validation.md](docs/validation.md), актуальный редизайн и отмена голосов — в [отдельном отчёте](docs/validation-redesign.md).
 
 ## Подключение проектов
 
