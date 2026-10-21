@@ -108,10 +108,14 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
   await expect(
     page.getByText("Проверьте перед публикацией", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("ПУБЛИЧНОЕ НАЗВАНИЕ")).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Заметка администратора" })
-    .fill(`${marker}-PRIVATE-NOTE`);
+  await expect(
+    page.getByText("На доске появятся название и описание сообщения выше.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Заметка администратора" }),
+  ).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 568 });
   const editor = page.getByRole("dialog");
   await page.getByRole("button", { name: "Сохранить", exact: true }).focus();
@@ -122,8 +126,8 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
   await page.keyboard.press("Escape");
   await expect(editor).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "Заметка администратора" }),
-  ).toHaveValue(`${marker}-PRIVATE-NOTE`);
+    page.getByRole("combobox", { name: "Приоритет", exact: true }),
+  ).toHaveText("Критический");
   await noHorizontalOverflow(page);
   await accessible(page);
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
@@ -140,6 +144,7 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     status: "planned",
   });
   await page.getByRole("button", { name: "Закрыть сообщение" }).click();
+  await expect(page.locator(`#report-${featureId}`)).toBeFocused();
 
   // Publish the second existing fixture to verify independent cards, without extra intake.
   await page
@@ -289,9 +294,10 @@ test("real intake, retained network-error draft, moderation, anonymous vote, dup
     ).toHaveAttribute("aria-pressed", "true");
     const card = publicPage.locator(".feature-card").first();
     expect((await card.boundingBox())!.y).toBeLessThan(350);
-    await expect(
-      card.getByRole("link", { name: "Кампус" }),
-    ).toHaveAttribute("href", "https://campus.kreoniz.ru/");
+    await expect(card.getByRole("link", { name: "Кампус" })).toHaveAttribute(
+      "href",
+      "https://campus.kreoniz.ru/",
+    );
     await expect(
       card.getByRole("link", { name: "Кампус" }).locator("img"),
     ).toBeVisible();

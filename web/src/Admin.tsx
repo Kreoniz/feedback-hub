@@ -7,7 +7,6 @@ import { Button } from "unlikely-ui/button";
 import { Card } from "unlikely-ui/card";
 import { Dialog } from "unlikely-ui/dialog";
 import { Input } from "unlikely-ui/input";
-import { Textarea } from "unlikely-ui/textarea";
 import { api, ApiError } from "./api";
 import {
   dateLabel,
@@ -96,14 +95,13 @@ export function Admin({ projects }: { projects: Project[] }) {
   return (
     <>
       <div className="admin-heading">
-        <div>
-          <p className="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p>
-          <h1>Входящие</h1>
-          <p className="lead">
-            Идеи и ошибки. Всё, что помогает улучшать проекты.
-          </p>
-        </div>
-        <Button variant="secondary" loading={loggingOut} onClick={logout}>
+        <h1>Входящие</h1>
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={loggingOut}
+          onClick={logout}
+        >
           Выйти
           <Icon name="arrow" />
         </Button>
@@ -217,24 +215,28 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
   );
   const [search, setSearch] = useSearch(filters.q, searchChange);
   const [selected, setSelected] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [more, setMore] = useState(
-    !!(filters.status || filters.priority || filters.information),
+    !!(
+      filters.status ||
+      filters.priority ||
+      filters.information ||
+      filters.moderation ||
+      (filters.sort && filters.sort !== "new")
+    ),
   );
-  const returnFocus = useRef<HTMLButtonElement | null>(null);
   const dirtyEditor = useRef(false);
   const onDirtyChange = useCallback((dirty: boolean) => {
     dirtyEditor.current = dirty;
   }, []);
-  const filtered = [
-    "project",
-    "type",
-    "status",
-    "moderation",
-    "priority",
-    "information",
-    "q",
-  ].some((key) => !!filters[key]);
+  const extraFilterCount =
+    ["status", "moderation", "priority", "information"].filter(
+      (key) => !!filters[key],
+    ).length + (filters.sort && filters.sort !== "new" ? 1 : 0);
+  const filtered =
+    extraFilterCount > 0 ||
+    ["project", "type", "q"].some((key) => !!filters[key]);
   const reset = () =>
     update({
       project: "",
@@ -245,6 +247,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
       information: "",
       q: "",
       offset: "",
+      sort: "new",
     });
   const offset = Number(new URLSearchParams(query).get("offset"));
   const resultsRegion = usePaginationFocus<HTMLElement>(offset);
@@ -259,7 +262,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
                 type="search"
                 value={search}
                 onValueChange={setSearch}
-                placeholder="Текст сообщения или заметки"
+                placeholder="Текст сообщения"
                 maxLength={200}
               />
             </div>
@@ -277,44 +280,31 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
           name="type"
           value={filters.type}
           onChange={(type) => update({ type })}
-          items={[
-            { value: "", label: "Все сообщения" },
-            ...options(typeLabels),
-          ]}
+          items={[{ value: "", label: "Все" }, ...options(typeLabels)]}
         />
-        <SelectField
-          label="Модерация"
-          name="moderation"
-          value={filters.moderation}
-          onChange={(moderation) => update({ moderation })}
-          items={[
-            { value: "", label: "Все сообщения" },
-            ...options(moderationLabels),
-          ]}
-        />
-        <SelectField
-          label="Порядок"
-          name="sort"
-          value={filters.sort}
-          onChange={(sort) => update({ sort })}
-          items={[
-            { value: "new", label: "Сначала новые" },
-            { value: "old", label: "Сначала старые" },
-            { value: "priority", label: "По приоритету" },
-          ]}
-        />
-        <Button
-          variant="ghost"
-          className="more-filters"
-          aria-expanded={more}
-          aria-controls="extra-filters"
-          onClick={() => setMore((value) => !value)}
-        >
-          {more ? "Меньше фильтров" : "Все фильтры"}
-          <Icon name={more ? "close" : "plus"} />
-        </Button>
         {more && (
           <div className="extra-filters" id="extra-filters">
+            <SelectField
+              label="Модерация"
+              name="moderation"
+              value={filters.moderation}
+              onChange={(moderation) => update({ moderation })}
+              items={[
+                { value: "", label: "Все сообщения" },
+                ...options(moderationLabels),
+              ]}
+            />
+            <SelectField
+              label="Порядок"
+              name="sort"
+              value={filters.sort}
+              onChange={(sort) => update({ sort })}
+              items={[
+                { value: "new", label: "Сначала новые" },
+                { value: "old", label: "Сначала старые" },
+                { value: "priority", label: "По приоритету" },
+              ]}
+            />
             <SelectField
               label="Статус"
               name="status"
@@ -336,7 +326,7 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
               ]}
             />
             <SelectField
-              label="Полнота информации"
+              label="Информативность"
               name="information"
               value={filters.information}
               onChange={(information) => update({ information })}
@@ -357,6 +347,18 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
               : "Список недоступен"}
         </p>
         <div className="button-row">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="more-filters"
+            aria-expanded={more}
+            aria-controls="extra-filters"
+            onClick={() => setMore((value) => !value)}
+          >
+            {more ? "Скрыть фильтры" : "Фильтры"}
+            {extraFilterCount > 0 && ` · ${extraFilterCount}`}
+            <Icon name={more ? "close" : "plus"} />
+          </Button>
           {filtered && (
             <Button variant="ghost" size="sm" onClick={reset}>
               Сбросить фильтры
@@ -390,58 +392,66 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
                   <li key={report.id}>
                     <Card.Root className="inbox-card">
                       <Button
+                        id={`report-${report.id}`}
                         variant="ghost"
                         className="report-open"
-                        onClick={(event) => {
-                          returnFocus.current = event.currentTarget;
+                        onClick={() => {
                           setSelected(report.id);
+                          setDetailOpen(true);
                         }}
                         aria-label={`Открыть: ${report.title || report.description.slice(0, 80)}`}
                       >
-                        <span className={`report-type ${report.type}`}>
-                          <Icon
-                            name={report.type === "bug" ? "message" : "plus"}
-                          />
+                        <span className="report-row">
+                          <span className={`report-type ${report.type}`}>
+                            <Icon
+                              name={report.type === "bug" ? "message" : "plus"}
+                            />
+                          </span>
+                          <span className="report-summary">
+                            <span className="card-meta">
+                              {report.project_name} · {typeLabels[report.type]}{" "}
+                              · {dateLabel(report.created_at)}
+                            </span>
+                            <span className="report-title">
+                              {report.title || report.description.slice(0, 100)}
+                            </span>
+                            {report.title &&
+                              report.description !== report.title && (
+                                <span className="report-excerpt">
+                                  {report.description}
+                                </span>
+                              )}
+                            <span className="badge-row">
+                              <Badge
+                                tone={
+                                  report.moderation === "spam" ||
+                                  report.moderation === "rejected"
+                                    ? "danger"
+                                    : report.moderation === "approved"
+                                      ? "success"
+                                      : "warning"
+                                }
+                              >
+                                {moderationLabels[report.moderation]}
+                              </Badge>
+                              <StatusBadge status={report.status} />
+                              {report.priority !== "untriaged" && (
+                                <Badge
+                                  tone={
+                                    report.priority === "critical" ||
+                                    report.priority === "high"
+                                      ? "danger"
+                                      : "neutral"
+                                  }
+                                >
+                                  {priorityLabels[report.priority]}
+                                </Badge>
+                              )}
+                              {report.duplicate_of && <Badge>Дубликат</Badge>}
+                            </span>
+                          </span>
+                          <Icon name="arrow" />
                         </span>
-                        <span className="report-summary">
-                          <span className="card-meta">
-                            {report.project_name} · {typeLabels[report.type]} ·{" "}
-                            {dateLabel(report.created_at)}
-                          </span>
-                          <span className="report-title">
-                            {report.title || report.description.slice(0, 100)}
-                          </span>
-                          <span className="report-excerpt">
-                            {report.description}
-                          </span>
-                          <span className="badge-row">
-                            <Badge
-                              tone={
-                                report.moderation === "spam" ||
-                                report.moderation === "rejected"
-                                  ? "danger"
-                                  : report.moderation === "approved"
-                                    ? "success"
-                                    : "warning"
-                              }
-                            >
-                              {moderationLabels[report.moderation]}
-                            </Badge>
-                            <StatusBadge status={report.status} />
-                            <Badge
-                              tone={
-                                report.priority === "critical" ||
-                                report.priority === "high"
-                                  ? "danger"
-                                  : "neutral"
-                              }
-                            >
-                              {priorityLabels[report.priority]}
-                            </Badge>
-                            {report.duplicate_of && <Badge>Дубликат</Badge>}
-                          </span>
-                        </span>
-                        <Icon name="arrow" />
                       </Button>
                     </Card.Root>
                   </li>
@@ -457,18 +467,27 @@ function Inbox({ projects, csrf }: { projects: Project[]; csrf: string }) {
         )
       )}
       <Dialog.Root
-        open={!!selected}
+        open={detailOpen}
         onOpenChange={(open) => {
           if (
             !open &&
             (!dirtyEditor.current ||
               window.confirm("Закрыть сообщение без сохранения изменений?"))
           )
-            setSelected(null);
+            setDetailOpen(false);
+        }}
+        onOpenChangeComplete={(open) => {
+          if (!open) setSelected(null);
         }}
       >
         {selected && (
-          <Dialog.Content className="report-dialog" finalFocus={returnFocus}>
+          <Dialog.Content
+            className="report-dialog"
+            finalFocus={() =>
+              document.getElementById(`report-${selected}`) ||
+              resultsRegion.current
+            }
+          >
             <ReportDetail
               id={selected}
               csrf={csrf}
@@ -502,7 +521,6 @@ function ReportDetail({
   return (
     <>
       <div className="dialog-heading">
-        <p className="eyebrow">СООБЩЕНИЕ</p>
         <Dialog.Close
           render={
             <Button
@@ -627,7 +645,6 @@ function ReportEditor({
         {dateLabel(report.created_at)}
       </Dialog.Description>
       <div className="report-content">
-        <h3>Описание</h3>
         <p className="user-content">{report.description}</p>
         {report.details && (
           <>
@@ -635,42 +652,49 @@ function ReportEditor({
             <p className="user-content">{report.details}</p>
           </>
         )}
-        <dl className="context-list">
-          <div>
-            <dt>ID сообщения</dt>
-            <dd className="mono">{report.id}</dd>
-          </div>
-          <div>
-            <dt>Обновлено</dt>
-            <dd>{dateLabel(report.updated_at)}</dd>
-          </div>
-          <div>
-            <dt>Голоса</dt>
-            <dd>{report.votes}</dd>
-          </div>
-          {report.context?.browser && (
+        <details className="technical-details">
+          <summary>Технические сведения</summary>
+          <dl className="context-list">
             <div>
-              <dt>Браузер</dt>
-              <dd>{report.context.browser}</dd>
+              <dt>ID сообщения</dt>
+              <dd className="mono">{report.id}</dd>
             </div>
-          )}
-          {report.context?.app_version && (
             <div>
-              <dt>Версия приложения</dt>
-              <dd>{report.context.app_version}</dd>
+              <dt>Обновлено</dt>
+              <dd>{dateLabel(report.updated_at)}</dd>
             </div>
-          )}
-          {contextLink && (
             <div>
-              <dt>Страница</dt>
-              <dd>
-                <a href={contextLink} target="_blank" rel="noreferrer noopener">
-                  {contextLink}
-                </a>
-              </dd>
+              <dt>Голоса</dt>
+              <dd>{report.votes}</dd>
             </div>
-          )}
-        </dl>
+            {report.context?.browser && (
+              <div>
+                <dt>Браузер</dt>
+                <dd>{report.context.browser}</dd>
+              </div>
+            )}
+            {report.context?.app_version && (
+              <div>
+                <dt>Версия приложения</dt>
+                <dd>{report.context.app_version}</dd>
+              </div>
+            )}
+            {contextLink && (
+              <div>
+                <dt>Страница</dt>
+                <dd>
+                  <a
+                    href={contextLink}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    {contextLink}
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
+        </details>
       </div>
       <form onSubmit={save} className="form-stack admin-editor" noValidate>
         <div className="editor-grid">
@@ -713,7 +737,7 @@ function ReportEditor({
             disabled={saving}
           />
           <SelectField
-            label="Полнота информации"
+            label="Информативность"
             name="information"
             value={draft.information}
             onChange={(value) =>
@@ -723,10 +747,7 @@ function ReportEditor({
             disabled={saving}
           />
         </div>
-        <p className="small muted">
-          Приоритет и полнота информации независимы. Даже короткое сообщение
-          может быть критическим.
-        </p>
+        <p className="small muted">Приоритет задаётся отдельно.</p>
         {report.type === "feature" &&
           draft.moderation === "approved" &&
           !draft.duplicate_of && (
@@ -734,18 +755,11 @@ function ReportEditor({
               <Alert.Root tone="warning">
                 <Alert.Title>Проверьте перед публикацией</Alert.Title>
                 <Alert.Description>
-                  На доске появятся точные название и описание ниже. Проверьте,
-                  что в них нет личных данных. Если они есть, оставьте идею на
-                  проверке или отклоните её. Детали, контекст и заметки
-                  останутся приватными.
+                  На доске появятся название и описание сообщения выше.
+                  Проверьте, что в них нет личных данных. Дополнительные детали
+                  и технические сведения останутся приватными.
                 </Alert.Description>
               </Alert.Root>
-              <Card.Root>
-                <p className="eyebrow">ПУБЛИЧНОЕ НАЗВАНИЕ</p>
-                <h3>{report.title}</h3>
-                <p className="eyebrow">ПУБЛИЧНОЕ ОПИСАНИЕ</p>
-                <p className="user-content">{report.description}</p>
-              </Card.Root>
             </div>
           )}
         {draft.moderation === "spam" && (
@@ -789,19 +803,6 @@ function ReportEditor({
             </p>
           </div>
         </details>
-        <FormField
-          label="Заметка администратора"
-          name="admin_note"
-          description="Приватно. Можно записать решение или причину отклонения."
-        >
-          <Textarea
-            value={draft.admin_note}
-            onValueChange={(value) => change("admin_note", value)}
-            rows={3}
-            maxLength={8000}
-            disabled={saving}
-          />
-        </FormField>
         {error !== undefined && (
           <ErrorNotice error={error} title="Изменения не сохранены" />
         )}
@@ -811,7 +812,7 @@ function ReportEditor({
               ? "Изменения сохранены."
               : dirty
                 ? "Есть несохранённые изменения."
-                : "Все изменения сохранены."}
+                : ""}
           </p>
           <div className="button-row">
             <Button
@@ -825,11 +826,10 @@ function ReportEditor({
                 setDuplicateError("");
               }}
             >
-              Отменить правки
+              Отменить
             </Button>
             <Button type="submit" disabled={!dirty} loading={saving}>
               Сохранить
-              <Icon name="check" />
             </Button>
           </div>
         </div>
