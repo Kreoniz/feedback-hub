@@ -19,7 +19,10 @@ export ADMIN_PASSWORD_HASH_FILE="$PWD/.local/e2e-hash"
 export APP_SECRET
 APP_SECRET=$(openssl rand -hex 32)
 export DATABASE_URL="$DATABASE_URL_TEST"
-export APP_ORIGIN=http://localhost:18080 DEVELOPMENT=true LISTEN_ADDR=127.0.0.1:18080
+test_port=${FEEDBACK_E2E_PORT:-18080}
+[[ "$test_port" =~ ^[0-9]{4,5}$ && "$test_port" -ge 1024 && "$test_port" -le 65535 ]] || { echo 'Invalid FEEDBACK_E2E_PORT'; exit 1; }
+export APP_ORIGIN="http://localhost:$test_port" DEVELOPMENT=true LISTEN_ADDR="127.0.0.1:$test_port"
+export FEEDBACK_TEST_URL="$APP_ORIGIN"
 export STATIC_DIR="$PWD/web/dist"
 export FEEDBACK_TEST_PASSWORD
 FEEDBACK_TEST_PASSWORD=$(cat .local/e2e-password)
