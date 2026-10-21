@@ -41,7 +41,9 @@ services:
       - ${SECRET_DIRECTORY:-./.local/secrets}/app_secret:/run/secrets/app_secret:ro,z
     depends_on:
       db: { condition: service_healthy }
-    networks: [data, ingress]
+    networks:
+      data:
+      ingress: { ipv4_address: 172.30.42.3 }
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
