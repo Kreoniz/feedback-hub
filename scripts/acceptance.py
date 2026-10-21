@@ -60,12 +60,17 @@ require(status == 200 and 'HttpOnly' in headers.get('Set-Cookie', ''), 'Signed H
 token = proof['token']
 time.sleep(2.1)
 feature = {'project': 'campus', 'type': 'feature', 'title': marker,
-           'description': marker + ' — клавиатурная навигация', 'form_token': token}
+           'description': marker + ' — клавиатурная навигация',
+           'details': marker + ' PRIVATE_DETAILS', 'form_token': token}
 bug = {'project': 'campus', 'type': 'bug', 'description': marker + ' — не открывается',
        'context': {'page_url': 'https://campus.kreoniz.ru/?token=private#secret', 'browser': 'Firefox'},
        'form_token': token}
 require(public.request('POST', '/api/reports', feature)[0] == 201, 'Anonymous feature accepted')
 require(public.request('POST', '/api/reports', bug)[0] == 201, 'Description-only bug accepted')
+_, other_proof, _ = stranger.request('GET', '/api/form')
+time.sleep(2.1)
+status, other_receipt, _ = stranger.request('POST', '/api/reports', {**bug, 'form_token': other_proof['token']})
+require(status == 201 and not other_receipt['duplicate'], 'Cross-visitor dedupe response reveals no prior match')
 status, result, _ = public.request('POST', '/api/reports', feature)
 require(status == 201 and not result['duplicate'], 'Dedupe does not disclose private existence')
 require(public.request('POST', '/api/reports', {**bug, 'website': 'bot'})[0] == 201, 'Honeypot non-disclosing response')
@@ -79,13 +84,14 @@ require(public.request('GET', '/api/features' + query)[1]['total'] == 0, 'Pendin
 path = '/api/admin/reports/' + idea['id']
 require(admin.request('PATCH', path, {'moderation': 'approved'})[0] == 403, 'Admin CSRF token required')
 require(admin.request('PATCH', path, {'moderation': 'approved'}, {**csrf, 'Origin': 'https://evil.example'})[0] == 403, 'Foreign Origin blocked')
-require(admin.request('PATCH', path, {'moderation': 'approved'}, csrf)[0] == 200, 'Feature moderation')
+require(admin.request('PATCH', path, {'moderation': 'approved', 'admin_note': marker + ' PRIVATE_NOTE'}, csrf)[0] == 200, 'Feature moderation')
 status, updated, _ = admin.request('PATCH', '/api/admin/reports/' + problem['id'], {'priority': 'critical', 'information': 'sparse'}, csrf)
 require(status == 200 and updated['priority'] == 'critical' and updated['information'] == 'sparse', 'Sparse report can be critical')
 require(admin.request('PATCH', '/api/admin/reports/' + problem['id'], {'moderation': 'approved'}, csrf)[0] == 400, 'Bug cannot become public')
 status, board, _ = public.request('GET', '/api/features' + query)
 require(status == 200 and board['total'] == 1, 'Only approved feature public')
 require(not set(board['items'][0]).intersection({'context', 'details', 'priority', 'admin_note', 'moderation'}), 'Public projection excludes private fields')
+require('PRIVATE_' not in json.dumps(board), 'Private synthetic text never appears in public JSON')
 vote_path = '/api/features/' + idea['id'] + '/vote'
 require(public.request('POST', vote_path, {})[1]['votes'] == 1, 'Anonymous vote accepted')
 # Concurrent identical cookies exercise DB uniqueness through the real proxy.
