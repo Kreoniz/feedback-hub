@@ -62,7 +62,13 @@ try:
         marker = pg('psql', '-d', databases[1], '-At', data=b'SELECT value FROM backup_probe;').strip()
         assert original_counts == restored_counts, 'Report/vote counts changed during restore'
         assert marker == b'post-restore-marker', 'Next backup omitted post-restore data'
-        print('PASS: restore, report/vote counts, changed database selection, and post-restore next backup')
+        archives = set((fixture / '.local/backups').glob('*.dump'))
+        for selector in ('dbname','database','host','port','user'):
+            url.write_text(f'postgres://feedback@db:5432/feedback?{selector}={databases[0]}&sslmode=disable\n')
+            result = subprocess.run(['bash', str(fixture / 'scripts/backup.sh')], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            assert result.returncode != 0, f'Unsafe {selector} override accepted'
+            assert set((fixture / '.local/backups').glob('*.dump')) == archives, 'Failed selector published a backup'
+        print('PASS: restore, counts, selected path, post-restore backup, and fail-closed query overrides')
 finally:
     for database in reversed(created):
         pg('dropdb', database)
