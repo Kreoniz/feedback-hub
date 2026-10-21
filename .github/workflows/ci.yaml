@@ -37,6 +37,7 @@ jobs:
       - run: npm install --global pnpm@12.5.1
       - run: pnpm --dir web install --frozen-lockfile
       - run: ./scripts/check.sh
+      - run: go -C backend run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
       - run: pnpm --dir web exec playwright install --with-deps firefox
       - run: ./scripts/test-e2e.sh
       - run: docker compose config --quiet
