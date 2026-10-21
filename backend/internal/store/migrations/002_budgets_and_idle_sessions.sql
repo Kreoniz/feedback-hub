@@ -10,4 +10,10 @@ CREATE TABLE intake_days (
  accepted integer NOT NULL DEFAULT 0 CHECK(accepted>=0),
  PRIMARY KEY(day,project)
 );
+INSERT INTO intake_days(day,project,accepted)
+ SELECT (created_at AT TIME ZONE 'UTC')::date,project,count(*)
+ FROM reports WHERE created_at >= ((now() AT TIME ZONE 'UTC')::date-31)::timestamp AT TIME ZONE 'UTC'
+ GROUP BY 1,2;
+INSERT INTO intake_days(day,project,accepted)
+ SELECT day,'*',sum(accepted) FROM intake_days GROUP BY day;
 ALTER TABLE sessions ADD COLUMN last_seen timestamptz NOT NULL DEFAULT now();

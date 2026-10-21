@@ -111,7 +111,18 @@ func (s *Store) Submit(ctx context.Context, r Submission) (bool, error) {
 	return duplicate, nil
 }
 
-const reportColumns = `r.id::text,r.project,r.title,r.description,r.status,(SELECT count(*) FROM votes v WHERE v.report_id=r.id),EXISTS(SELECT 1 FROM votes v WHERE v.report_id=r.id AND v.visitor=$1),r.created_at,r.type,r.details,r.context,r.moderation,r.priority,r.information,r.duplicate_of::text,r.admin_note,r.updated_at`
+const featureColumns = `r.id::text,r.project,r.title,r.description,r.status,(SELECT count(*) FROM votes v WHERE v.report_id=r.id),EXISTS(SELECT 1 FROM votes v WHERE v.report_id=r.id AND v.visitor=$1),r.created_at`
+const reportColumns = featureColumns + `,r.type,r.details,r.context,r.moderation,r.priority,r.information,r.duplicate_of::text,r.admin_note,r.updated_at`
+
+func scanFeature(row pgx.Row) (Feature, error) {
+	var f Feature
+	err := row.Scan(&f.ID, &f.Project, &f.Title, &f.Description, &f.Status, &f.Votes, &f.Voted, &f.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return f, ErrNotFound
+	}
+	f.ProjectName = ProjectNames[f.Project]
+	return f, err
+}
 
 func scanReport(row pgx.Row) (Report, error) {
 	var r Report
@@ -169,13 +180,23 @@ func (s *Store) List(ctx context.Context, f Filter, public bool, visitor []byte)
 		return nil, 0, err
 	}
 	args = append(args, f.Limit, f.Offset)
-	rows, err := tx.Query(ctx, `SELECT `+reportColumns+` FROM reports r WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order+` LIMIT $`+itoa(len(args)-1)+` OFFSET $`+itoa(len(args)), args...)
+	columns := reportColumns
+	if public {
+		columns = featureColumns
+	}
+	rows, err := tx.Query(ctx, `SELECT `+columns+` FROM reports r WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order+` LIMIT $`+itoa(len(args)-1)+` OFFSET $`+itoa(len(args)), args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	items := make([]Report, 0)
 	for rows.Next() {
-		r, err := scanReport(rows)
+		var r Report
+		var err error
+		if public {
+			r.Feature, err = scanFeature(rows)
+		} else {
+			r, err = scanReport(rows)
+		}
 		if err != nil {
 			rows.Close()
 			return nil, 0, err
